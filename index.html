@@ -1,788 +1,970 @@
-<h2 class="sr-only">90-Day Lockdown tracker with editable tasks, calisthenics progression for front lever, handstand, and muscle-up, session logs, and JSON import/export.</h2>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="description" content="90-Day Lockdown — Brazil runway tracker" />
+  <title>90-Day Lockdown</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%92%3C/text%3E%3C/svg%3E" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #0a0a0a;
+      color: #e5e5e5;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    body { padding: 12px; }
+    @media (min-width: 768px) { body { padding: 24px; max-width: 1200px; margin: 0 auto; } }
 
-<style>
-  .ld-shell { background: #0a0a0a; color: #e5e5e5; padding: 24px; border-radius: 12px; font-family: var(--font-sans); }
-  .ld-title { font-size: 22px; font-weight: 500; margin: 0; letter-spacing: 0.5px; }
-  .ld-title .accent { color: #4ade80; }
-  .ld-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
-  .ld-daypill { background: #1a1a1a; border: 0.5px solid #2a2a2a; border-radius: 20px; padding: 5px 14px; font-size: 12px; color: #a1a1aa; cursor: pointer; }
-  .ld-banner { font-size: 12px; color: #a78bfa; margin-bottom: 4px; letter-spacing: 0.3px; }
-  .ld-xp { font-size: 12px; color: #71717a; text-align: right; }
-  .ld-divider { height: 0.5px; background: #2a2a2a; margin: 8px 0 18px; }
-  .ld-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
-  .ld-stat { background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 14px; text-align: center; }
-  .ld-stat-val { font-size: 22px; font-weight: 500; }
-  .ld-stat-lbl { font-size: 10px; color: #71717a; letter-spacing: 1px; margin-top: 6px; }
-  .ld-bars { margin-bottom: 14px; }
-  .ld-bar-row { display: grid; grid-template-columns: 70px 1fr 40px; gap: 10px; align-items: center; margin-bottom: 6px; font-size: 12px; }
-  .ld-bar-track { height: 4px; background: #1a1a1a; border-radius: 2px; overflow: hidden; }
-  .ld-bar-fill { height: 100%; transition: width 0.3s; }
-  .ld-bar-pct { font-size: 11px; color: #71717a; text-align: right; }
-  .ld-msg { background: rgba(74, 222, 128, 0.08); border: 0.5px solid rgba(74, 222, 128, 0.25); color: #4ade80; padding: 12px; border-radius: 8px; text-align: center; font-size: 13px; margin-bottom: 18px; }
-  .ld-tabs { display: flex; gap: 4px; border-bottom: 0.5px solid #2a2a2a; margin-bottom: 16px; overflow-x: auto; flex-wrap: wrap; }
-  .ld-tab { background: transparent; border: none; color: #71717a; padding: 10px 12px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -0.5px; white-space: nowrap; font-family: inherit; }
-  .ld-tab.active { color: #e5e5e5; border-bottom-color: #4ade80; }
-  .ld-section-title { font-size: 10px; color: #71717a; letter-spacing: 1.5px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-  .ld-section-title .ld-edit-btn { background: transparent; border: 0.5px solid #2a2a2a; color: #71717a; padding: 3px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; letter-spacing: 0.5px; font-family: inherit; }
-  .ld-section-title .ld-edit-btn:hover { color: #4ade80; border-color: #4ade80; }
-  .ld-task { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 8px; margin-bottom: 6px; cursor: pointer; transition: background 0.15s; }
-  .ld-task:hover { background: #131313; }
-  .ld-task.done { opacity: 0.5; }
-  .ld-task.done .ld-task-title { text-decoration: line-through; }
-  .ld-task.editing { cursor: default; background: #131313; }
-  .ld-checkbox { width: 18px; height: 18px; border: 1.5px solid #3a3a3a; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-  .ld-task.done .ld-checkbox { background: #4ade80; border-color: #4ade80; color: #0a0a0a; }
-  .ld-task-body { flex: 1; min-width: 0; }
-  .ld-task-title { font-size: 14px; color: #e5e5e5; }
-  .ld-task-sub { font-size: 11px; color: #71717a; margin-top: 2px; }
-  .ld-task-xp { font-size: 11px; color: #71717a; background: #1a1a1a; padding: 4px 8px; border-radius: 10px; }
-  .ld-edit-input { background: #0a0a0a; border: 0.5px solid #4ade80; color: #e5e5e5; padding: 4px 8px; border-radius: 4px; width: 100%; font-family: inherit; font-size: 13px; }
-  .ld-edit-input.sub { font-size: 11px; color: #a1a1aa; margin-top: 4px; }
-  .ld-edit-actions { display: flex; gap: 6px; }
-  .ld-icon-btn { background: transparent; border: none; color: #71717a; cursor: pointer; padding: 4px; font-size: 14px; }
-  .ld-icon-btn:hover { color: #4ade80; }
-  .ld-icon-btn.danger:hover { color: #f87171; }
-  .ld-add-row { display: flex; gap: 6px; margin-top: 8px; padding: 10px; background: #0a0a0a; border: 0.5px dashed #2a2a2a; border-radius: 8px; }
-  .ld-add-row input { flex: 1; background: #0f0f0f; border: 0.5px solid #1a1a1a; color: #e5e5e5; padding: 6px 10px; border-radius: 6px; font-family: inherit; font-size: 12px; }
-  .ld-add-row input[type=number] { width: 60px; flex: 0 0 60px; }
-  .ld-add-row button { background: #1a1a1a; border: 0.5px solid #2a2a2a; color: #4ade80; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
-  .ld-notes { width: 100%; min-height: 180px; background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 8px; padding: 14px; color: #e5e5e5; font-family: inherit; font-size: 13px; resize: vertical; line-height: 1.7; box-sizing: border-box; }
-  .ld-notes:focus { outline: none; border-color: #4ade80; }
-  .ld-mood-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-  .ld-mood-btn { background: #0f0f0f; border: 0.5px solid #1a1a1a; color: #a1a1aa; padding: 8px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; font-family: inherit; }
-  .ld-mood-btn.active { background: rgba(167, 139, 250, 0.15); border-color: #a78bfa; color: #a78bfa; }
-  .ld-prompt-list { display: grid; gap: 8px; margin-bottom: 12px; }
-  .ld-prompt { font-size: 12px; color: #71717a; padding: 8px 10px; background: #0f0f0f; border-left: 2px solid #2a2a2a; }
-  .ld-budget { background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
-  .ld-budget-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
-  .ld-budget-input { background: #0a0a0a; border: 0.5px solid #2a2a2a; color: #e5e5e5; padding: 6px 10px; border-radius: 6px; width: 80px; font-family: inherit; font-size: 13px; }
-  .ld-food-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; }
-  .ld-food { padding: 8px 10px; background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 6px; font-size: 12px; cursor: pointer; text-align: center; color: #a1a1aa; position: relative; }
-  .ld-food.had { background: rgba(74, 222, 128, 0.1); border-color: rgba(74, 222, 128, 0.3); color: #4ade80; }
-  .ld-food .ld-food-x { position: absolute; top: 2px; right: 4px; font-size: 10px; color: #52525b; display: none; }
-  .ld-food.editing-mode .ld-food-x { display: inline; }
-  .ld-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; margin-bottom: 18px; }
-  .ld-day { background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 8px; padding: 14px 4px; text-align: center; min-height: 70px; display: flex; flex-direction: column; justify-content: center; }
-  .ld-day.today { border-color: #4ade80; }
-  .ld-day-letter { font-size: 12px; color: #71717a; margin-bottom: 6px; }
-  .ld-day-dot { font-size: 10px; }
-  .ld-heatmap { display: grid; grid-template-columns: repeat(13, 1fr); gap: 4px; margin-top: 10px; }
-  .ld-heat-cell { aspect-ratio: 1; background: #111; border-radius: 4px; }
-  .ld-heat-cell.l1 { background: rgba(74, 222, 128, 0.15); }
-  .ld-heat-cell.l2 { background: rgba(74, 222, 128, 0.35); }
-  .ld-heat-cell.l3 { background: rgba(74, 222, 128, 0.6); }
-  .ld-heat-cell.l4 { background: rgba(74, 222, 128, 0.9); }
-  .ld-heat-labels { display: grid; grid-template-columns: repeat(13, 1fr); gap: 4px; margin-top: 8px; }
-  .ld-heat-label { font-size: 9px; color: #52525b; text-align: center; }
-  .ld-lang-row { display: flex; gap: 8px; margin-bottom: 12px; }
-  .ld-lang-btn, .ld-skill-btn { background: #0f0f0f; border: 0.5px solid #1a1a1a; color: #a1a1aa; padding: 8px 16px; border-radius: 8px; font-size: 12px; cursor: pointer; font-family: inherit; flex: 1; }
-  .ld-lang-btn.active, .ld-skill-btn.active { background: rgba(74, 222, 128, 0.1); border-color: #4ade80; color: #4ade80; }
-  .ld-controls { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; padding-top: 14px; border-top: 0.5px solid #1f1f1f; flex-wrap: wrap; }
-  .ld-btn { background: transparent; border: 0.5px solid #2a2a2a; color: #a1a1aa; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
-  .ld-btn:hover { border-color: #4ade80; color: #4ade80; }
-  .ld-btn.danger:hover { border-color: #f87171; color: #f87171; }
-  .ld-section { display: none; }
-  .ld-section.active { display: block; }
-  .ld-ladder { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
-  .ld-rung { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 6px; font-size: 13px; cursor: pointer; }
-  .ld-rung:hover { background: #131313; }
-  .ld-rung.current { background: rgba(74, 222, 128, 0.08); border-color: #4ade80; color: #4ade80; }
-  .ld-rung.completed { color: #71717a; }
-  .ld-rung.completed .ld-rung-num { color: #4ade80; }
-  .ld-rung-num { font-size: 11px; color: #71717a; background: #1a1a1a; padding: 2px 6px; border-radius: 4px; min-width: 24px; text-align: center; }
-  .ld-rung-name { flex: 1; }
-  .ld-rung-target { font-size: 11px; color: #71717a; }
-  .ld-log-row { display: grid; grid-template-columns: 80px 1fr 60px 60px; gap: 8px; align-items: center; padding: 10px; background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 6px; margin-bottom: 6px; font-size: 12px; }
-  .ld-log-row .ld-log-date { color: #71717a; font-size: 11px; }
-  .ld-log-row .ld-log-notes { color: #a1a1aa; }
-  .ld-log-empty { font-size: 12px; color: #52525b; text-align: center; padding: 20px; }
-  .ld-session-form { background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
-  .ld-form-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
-  .ld-form-row label { font-size: 12px; color: #a1a1aa; min-width: 80px; }
-  .ld-form-row input, .ld-form-row textarea { background: #0a0a0a; border: 0.5px solid #2a2a2a; color: #e5e5e5; padding: 6px 10px; border-radius: 6px; font-family: inherit; font-size: 12px; flex: 1; box-sizing: border-box; }
-  .ld-form-row textarea { min-height: 50px; resize: vertical; }
-  .ld-import-zone { background: #0f0f0f; border: 0.5px dashed #2a2a2a; border-radius: 8px; padding: 20px; text-align: center; margin-top: 8px; }
-  .ld-import-zone input { display: none; }
-  .ld-import-label { color: #4ade80; cursor: pointer; font-size: 13px; }
-</style>
-
-<div class="ld-shell">
-  <div class="ld-header">
-    <h1 class="ld-title">90-Day <span class="accent">Lockdown</span></h1>
-    <div class="ld-daypill" id="ld-daypill" title="Click to set day">Day <span id="ld-curday">1</span>/90</div>
-  </div>
-  <div class="ld-banner">Brazil runway</div>
-  <div class="ld-xp"><span id="ld-totxp">0</span> XP</div>
-  <div class="ld-divider"></div>
-
-  <div class="ld-stats">
-    <div class="ld-stat"><div class="ld-stat-val" id="ld-today" style="color:#4ade80">0</div><div class="ld-stat-lbl">TODAY</div></div>
-    <div class="ld-stat"><div class="ld-stat-val" id="ld-streak" style="color:#fbbf24">0</div><div class="ld-stat-lbl">STREAK</div></div>
-    <div class="ld-stat"><div class="ld-stat-val" id="ld-xp" style="color:#a78bfa">0</div><div class="ld-stat-lbl">TOTAL XP</div></div>
-    <div class="ld-stat"><div class="ld-stat-val" id="ld-day">1</div><div class="ld-stat-lbl">DAY</div></div>
-  </div>
-
-  <div class="ld-bars">
-    <div class="ld-bar-row"><span style="color:#4ade80">Jobs</span><div class="ld-bar-track"><div class="ld-bar-fill" id="bar-jobs" style="background:#4ade80; width:0%"></div></div><span class="ld-bar-pct" id="pct-jobs">0%</span></div>
-    <div class="ld-bar-row"><span style="color:#a78bfa">Move</span><div class="ld-bar-track"><div class="ld-bar-fill" id="bar-move" style="background:#a78bfa; width:0%"></div></div><span class="ld-bar-pct" id="pct-move">0%</span></div>
-    <div class="ld-bar-row"><span style="color:#fb923c">Food</span><div class="ld-bar-track"><div class="ld-bar-fill" id="bar-food" style="background:#fb923c; width:0%"></div></div><span class="ld-bar-pct" id="pct-food">0%</span></div>
-    <div class="ld-bar-row"><span style="color:#f87171">Sauna</span><div class="ld-bar-track"><div class="ld-bar-fill" id="bar-sauna" style="background:#f87171; width:0%"></div></div><span class="ld-bar-pct" id="pct-sauna">0%</span></div>
-    <div class="ld-bar-row"><span style="color:#60a5fa">Lang</span><div class="ld-bar-track"><div class="ld-bar-fill" id="bar-lang" style="background:#60a5fa; width:0%"></div></div><span class="ld-bar-pct" id="pct-lang">0%</span></div>
-    <div class="ld-bar-row"><span style="color:#ec4899">Skill</span><div class="ld-bar-track"><div class="ld-bar-fill" id="bar-skill" style="background:#ec4899; width:0%"></div></div><span class="ld-bar-pct" id="pct-skill">0%</span></div>
-  </div>
-
-  <div class="ld-msg" id="ld-msg">Day 1. Start with one task. That's all.</div>
-
-  <div class="ld-tabs">
-    <button class="ld-tab active" data-tab="jobs">Jobs</button>
-    <button class="ld-tab" data-tab="move">Move</button>
-    <button class="ld-tab" data-tab="skill">Skill</button>
-    <button class="ld-tab" data-tab="food">Food</button>
-    <button class="ld-tab" data-tab="sauna">Sauna</button>
-    <button class="ld-tab" data-tab="lang">Idiomas</button>
-    <button class="ld-tab" data-tab="notes">Notes</button>
-    <button class="ld-tab" data-tab="week">Week</button>
-    <button class="ld-tab" data-tab="data">Data</button>
-  </div>
-
-  <div class="ld-section active" data-section="jobs">
-    <div class="ld-section-title">TODAY'S JOB TASKS<button class="ld-edit-btn" data-edit-group="jobs">EDIT</button></div>
-    <div id="tasks-jobs"></div>
-  </div>
-
-  <div class="ld-section" data-section="move">
-    <div class="ld-section-title">MOVEMENT<button class="ld-edit-btn" data-edit-group="move">EDIT</button></div>
-    <div id="tasks-move"></div>
-  </div>
-
-  <div class="ld-section" data-section="skill">
-    <div class="ld-section-title">PRIMARY SKILL FOCUS</div>
-    <div class="ld-lang-row">
-      <button class="ld-skill-btn active" data-skill="front_lever">Front lever</button>
-      <button class="ld-skill-btn" data-skill="handstand">Handstand</button>
-      <button class="ld-skill-btn" data-skill="muscle_up">Muscle-up</button>
-    </div>
-    <div class="ld-section-title">PROGRESSION LADDER<button class="ld-edit-btn" data-edit-skill="1">EDIT</button></div>
-    <div class="ld-ladder" id="skill-ladder"></div>
-    <div class="ld-section-title">LOG A SESSION</div>
-    <div class="ld-session-form">
-      <div class="ld-form-row"><label>Sets × reps/hold</label><input type="text" id="skill-sets" placeholder="e.g. 4x10s tuck holds" /></div>
-      <div class="ld-form-row"><label>Quality /10</label><input type="number" id="skill-quality" min="1" max="10" value="7" /></div>
-      <div class="ld-form-row"><label>Notes</label><textarea id="skill-notes" placeholder="How it felt. What clicked. What hurt."></textarea></div>
-      <div class="ld-form-row"><label></label><button class="ld-btn" id="skill-log-btn" style="margin-left:auto">Log session</button></div>
-    </div>
-    <div class="ld-section-title">SESSION HISTORY</div>
-    <div id="skill-log"></div>
-  </div>
-
-  <div class="ld-section" data-section="food">
-    <div class="ld-section-title">WHOLE FOODS — DID I EAT IT TODAY?<button class="ld-edit-btn" data-edit-foods="1">EDIT</button></div>
-    <div class="ld-food-grid" id="food-grid"></div>
-    <div class="ld-section-title" style="margin-top:18px">TEAS</div>
-    <div class="ld-food-grid" id="tea-grid"></div>
-    <div class="ld-section-title" style="margin-top:18px">GROCERY BUDGET</div>
-    <div class="ld-budget">
-      <div class="ld-budget-row">
-        <span style="color:#a1a1aa">Spent this week</span>
-        <span>$<input type="number" class="ld-budget-input" id="grocery-spend" value="0" min="0" /></span>
-      </div>
-      <div class="ld-budget-row">
-        <span style="color:#a1a1aa">Target</span>
-        <span style="color:#4ade80">$100</span>
-      </div>
-      <div class="ld-bar-track" style="margin-top:8px"><div class="ld-bar-fill" id="grocery-bar" style="background:#fb923c; width:0%"></div></div>
-      <div style="font-size:11px; color:#71717a; margin-top:6px" id="grocery-status">Set spend to track</div>
+    .ld-shell { background: #0a0a0a; color: #e5e5e5; padding: 24px; border-radius: 12px; font-family: inherit; }
+    @media (max-width: 600px) { .ld-shell { padding: 12px; } }
+    .ld-title { font-size: 22px; font-weight: 500; margin: 0; letter-spacing: 0.5px; }
+    .ld-title .accent { color: #4ade80; }
+    .ld-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; gap: 12px; flex-wrap: wrap; }
+    .ld-daypill { background: #1a1a1a; border: 0.5px solid #2a2a2a; border-radius: 20px; padding: 5px 14px; font-size: 12px; color: #a1a1aa; cursor: pointer; }
+    .ld-banner { font-size: 12px; color: #a78bfa; margin-bottom: 4px; letter-spacing: 0.3px; }
+    .ld-xp { font-size: 12px; color: #71717a; text-align: right; }
+    .ld-sync-status { font-size: 10px; color: #71717a; display: inline-flex; align-items: center; gap: 6px; }
+    .ld-sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; display: inline-block; }
+    .ld-sync-dot.syncing { background: #fbbf24; animation: pulse 1s infinite; }
+    .ld-sync-dot.error { background: #f87171; }
+    .ld-sync-dot.offline { background: #71717a; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .ld-divider { height: 0.5px; background: #2a2a2a; margin: 8px 0 18px; }
+    .ld-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+    @media (max-width: 600px) { .ld-stats { grid-template-columns: repeat(2, 1fr); } }
+    .ld-stat { background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 14px; text-align: center; }
+    .ld-stat-val { font-size: 22px; font-weight: 500; }
+    .ld-stat-lbl { font-size: 10px; color: #71717a; letter-spacing: 1px; margin-top: 6px; }
+    .ld-bars { margin-bottom: 14px; }
+    .ld-bar-row { display: grid; grid-template-columns: 70px 1fr 40px; gap: 10px; align-items: center; margin-bottom: 6px; font-size: 12px; }
+    .ld-bar-track { height: 4px; background: #1a1a1a; border-radius: 2px; overflow: hidden; }
+    .ld-bar-fill { height: 100%; transition: width 0.3s; }
+    .ld-bar-pct { font-size: 11px; color: #71717a; text-align: right; }
+    .ld-msg { background: rgba(74, 222, 128, 0.08); border: 0.5px solid rgba(74, 222, 128, 0.25); color: #4ade80; padding: 12px; border-radius: 8px; text-align: center; font-size: 13px; margin-bottom: 18px; }
+    .ld-tabs { display: flex; gap: 4px; border-bottom: 0.5px solid #2a2a2a; margin-bottom: 16px; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+    .ld-tab { background: transparent; border: none; color: #71717a; padding: 10px 12px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -0.5px; white-space: nowrap; font-family: inherit; }
+    .ld-tab.active { color: #e5e5e5; border-bottom-color: #4ade80; }
+    .ld-section-title { font-size: 10px; color: #71717a; letter-spacing: 1.5px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .ld-section-title .ld-edit-btn { background: transparent; border: 0.5px solid #2a2a2a; color: #71717a; padding: 3px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; letter-spacing: 0.5px; font-family: inherit; }
+    .ld-section-title .ld-edit-btn:hover { color: #4ade80; border-color: #4ade80; }
+    .ld-task { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 8px; margin-bottom: 6px; cursor: pointer; transition: background 0.15s; }
+    .ld-task:hover { background: #131313; }
+    .ld-task.done { opacity: 0.5; }
+    .ld-task.done .ld-task-title { text-decoration: line-through; }
+    .ld-task.editing { cursor: default; background: #131313; }
+    .ld-checkbox { width: 18px; height: 18px; border: 1.5px solid #3a3a3a; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #0a0a0a; font-size: 12px; }
+    .ld-task.done .ld-checkbox { background: #4ade80; border-color: #4ade80; }
+    .ld-task-body { flex: 1; min-width: 0; }
+    .ld-task-title { font-size: 14px; color: #e5e5e5; }
+    .ld-task-sub { font-size: 11px; color: #71717a; margin-top: 2px; }
+    .ld-task-xp { font-size: 11px; color: #71717a; background: #1a1a1a; padding: 4px 8px; border-radius: 10px; }
+    .ld-edit-input { background: #0a0a0a; border: 0.5px solid #4ade80; color: #e5e5e5; padding: 4px 8px; border-radius: 4px; width: 100%; font-family: inherit; font-size: 13px; box-sizing: border-box; }
+    .ld-edit-input.sub { font-size: 11px; color: #a1a1aa; margin-top: 4px; }
+    .ld-icon-btn { background: transparent; border: none; color: #71717a; cursor: pointer; padding: 4px; font-size: 14px; }
+    .ld-icon-btn:hover { color: #4ade80; }
+    .ld-icon-btn.danger:hover { color: #f87171; }
+    .ld-add-row { display: flex; gap: 6px; margin-top: 8px; padding: 10px; background: #0a0a0a; border: 0.5px dashed #2a2a2a; border-radius: 8px; flex-wrap: wrap; }
+    .ld-add-row input { flex: 1; min-width: 100px; background: #0f0f0f; border: 0.5px solid #1a1a1a; color: #e5e5e5; padding: 6px 10px; border-radius: 6px; font-family: inherit; font-size: 12px; }
+    .ld-add-row input[type=number] { width: 60px; flex: 0 0 60px; min-width: 60px; }
+    .ld-add-row button { background: #1a1a1a; border: 0.5px solid #2a2a2a; color: #4ade80; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .ld-notes { width: 100%; min-height: 180px; background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 8px; padding: 14px; color: #e5e5e5; font-family: inherit; font-size: 13px; resize: vertical; line-height: 1.7; box-sizing: border-box; }
+    .ld-notes:focus { outline: none; border-color: #4ade80; }
+    .ld-mood-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .ld-mood-btn { background: #0f0f0f; border: 0.5px solid #1a1a1a; color: #a1a1aa; padding: 8px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .ld-mood-btn.active { background: rgba(167, 139, 250, 0.15); border-color: #a78bfa; color: #a78bfa; }
+    .ld-prompt-list { display: grid; gap: 8px; margin-bottom: 12px; }
+    .ld-prompt { font-size: 12px; color: #71717a; padding: 8px 10px; background: #0f0f0f; border-left: 2px solid #2a2a2a; }
+    .ld-budget { background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+    .ld-budget-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
+    .ld-budget-input { background: #0a0a0a; border: 0.5px solid #2a2a2a; color: #e5e5e5; padding: 6px 10px; border-radius: 6px; width: 80px; font-family: inherit; font-size: 13px; }
+    .ld-food-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; }
+    .ld-food { padding: 8px 10px; background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 6px; font-size: 12px; cursor: pointer; text-align: center; color: #a1a1aa; }
+    .ld-food.had { background: rgba(74, 222, 128, 0.1); border-color: rgba(74, 222, 128, 0.3); color: #4ade80; }
+    .ld-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; margin-bottom: 18px; }
+    .ld-day { background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 8px; padding: 14px 4px; text-align: center; min-height: 70px; display: flex; flex-direction: column; justify-content: center; }
+    .ld-day.today { border-color: #4ade80; }
+    .ld-day-letter { font-size: 12px; color: #71717a; margin-bottom: 6px; }
+    .ld-day-dot { font-size: 10px; }
+    .ld-heatmap { display: grid; grid-template-columns: repeat(13, 1fr); grid-template-rows: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
+    .ld-heat-cell { aspect-ratio: 1; background: #111; border-radius: 4px; }
+    .ld-heat-cell.l1 { background: rgba(74, 222, 128, 0.15); }
+    .ld-heat-cell.l2 { background: rgba(74, 222, 128, 0.35); }
+    .ld-heat-cell.l3 { background: rgba(74, 222, 128, 0.6); }
+    .ld-heat-cell.l4 { background: rgba(74, 222, 128, 0.9); }
+    .ld-heat-labels { display: grid; grid-template-columns: repeat(13, 1fr); gap: 4px; margin-top: 8px; }
+    .ld-heat-label { font-size: 9px; color: #52525b; text-align: center; }
+    .ld-lang-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .ld-lang-btn, .ld-skill-btn { background: #0f0f0f; border: 0.5px solid #1a1a1a; color: #a1a1aa; padding: 8px 16px; border-radius: 8px; font-size: 12px; cursor: pointer; font-family: inherit; flex: 1; }
+    .ld-lang-btn.active, .ld-skill-btn.active { background: rgba(74, 222, 128, 0.1); border-color: #4ade80; color: #4ade80; }
+    .ld-btn { background: transparent; border: 0.5px solid #2a2a2a; color: #a1a1aa; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .ld-btn:hover { border-color: #4ade80; color: #4ade80; }
+    .ld-btn.danger:hover { border-color: #f87171; color: #f87171; }
+    .ld-section { display: none; }
+    .ld-section.active { display: block; }
+    .ld-ladder { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
+    .ld-rung { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 6px; font-size: 13px; cursor: pointer; }
+    .ld-rung:hover { background: #131313; }
+    .ld-rung.current { background: rgba(74, 222, 128, 0.08); border-color: #4ade80; color: #4ade80; }
+    .ld-rung.completed { color: #71717a; }
+    .ld-rung.completed .ld-rung-num { color: #4ade80; }
+    .ld-rung-num { font-size: 11px; color: #71717a; background: #1a1a1a; padding: 2px 6px; border-radius: 4px; min-width: 24px; text-align: center; }
+    .ld-rung-name { flex: 1; }
+    .ld-rung-target { font-size: 11px; color: #71717a; }
+    .ld-log-row { display: grid; grid-template-columns: 80px 1fr 60px 30px; gap: 8px; align-items: center; padding: 10px; background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 6px; margin-bottom: 6px; font-size: 12px; }
+    .ld-log-row .ld-log-date { color: #71717a; font-size: 11px; }
+    .ld-log-row .ld-log-notes { color: #a1a1aa; }
+    .ld-log-empty { font-size: 12px; color: #52525b; text-align: center; padding: 20px; }
+    .ld-session-form { background: #0f0f0f; border: 0.5px solid #1a1a1a; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+    .ld-form-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; flex-wrap: wrap; }
+    .ld-form-row label { font-size: 12px; color: #a1a1aa; min-width: 80px; }
+    .ld-form-row input, .ld-form-row textarea { background: #0a0a0a; border: 0.5px solid #2a2a2a; color: #e5e5e5; padding: 6px 10px; border-radius: 6px; font-family: inherit; font-size: 12px; flex: 1; min-width: 100px; box-sizing: border-box; }
+    .ld-form-row textarea { min-height: 50px; resize: vertical; }
+    .ld-auth-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; max-width: 360px; margin: 0 auto; }
+    .ld-auth-title { font-size: 24px; margin-bottom: 8px; }
+    .ld-auth-sub { font-size: 13px; color: #71717a; margin-bottom: 32px; text-align: center; }
+    .ld-auth-form { width: 100%; }
+    .ld-auth-input { width: 100%; background: #0f0f0f; border: 0.5px solid #2a2a2a; color: #e5e5e5; padding: 12px 14px; border-radius: 8px; margin-bottom: 10px; font-family: inherit; font-size: 14px; box-sizing: border-box; }
+    .ld-auth-input:focus { outline: none; border-color: #4ade80; }
+    .ld-auth-btn { width: 100%; background: #4ade80; color: #0a0a0a; border: none; padding: 12px; border-radius: 8px; font-weight: 500; cursor: pointer; font-family: inherit; font-size: 14px; margin-top: 8px; }
+    .ld-auth-btn:hover { background: #22c55e; }
+    .ld-auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .ld-auth-toggle { background: transparent; border: none; color: #71717a; cursor: pointer; font-size: 12px; margin-top: 16px; font-family: inherit; text-decoration: underline; }
+    .ld-auth-error { color: #f87171; font-size: 12px; margin-top: 10px; text-align: center; }
+    .ld-loading { text-align: center; padding: 40px; color: #71717a; font-size: 13px; }
+    .ld-user-info { display: flex; align-items: center; gap: 10px; font-size: 11px; color: #71717a; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <div id="ld-root">
+    <div class="ld-shell">
+      <div class="ld-loading">Loading…</div>
     </div>
   </div>
 
-  <div class="ld-section" data-section="sauna">
-    <div class="ld-section-title">SAUNA SESSION<button class="ld-edit-btn" data-edit-group="sauna">EDIT</button></div>
-    <div id="tasks-sauna"></div>
-    <div class="ld-section-title" style="margin-top:18px">SESSION LOG</div>
-    <div class="ld-budget">
-      <div class="ld-budget-row">
-        <span style="color:#a1a1aa">Minutes today</span>
-        <span><input type="number" class="ld-budget-input" id="sauna-min" value="0" min="0" max="60" /></span>
-      </div>
-      <div class="ld-budget-row">
-        <span style="color:#a1a1aa">Rounds</span>
-        <span><input type="number" class="ld-budget-input" id="sauna-rounds" value="0" min="0" max="5" /></span>
-      </div>
-      <div style="font-size:11px; color:#71717a; margin-top:6px">Target: 20–30 min, 2–4 rounds, 3–4x/week</div>
-    </div>
-  </div>
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-  <div class="ld-section" data-section="lang">
-    <div class="ld-section-title">LANGUAGE FOCUS</div>
-    <div class="ld-lang-row">
-      <button class="ld-lang-btn active" data-lang="es">Español</button>
-      <button class="ld-lang-btn" data-lang="pt">Português</button>
-    </div>
-    <div class="ld-section-title">TODAY'S TASKS<button class="ld-edit-btn" data-edit-group="lang">EDIT</button></div>
-    <div id="tasks-lang"></div>
-    <div class="ld-section-title" style="margin-top:18px">VOCAB / PHRASES LOGGED TODAY</div>
-    <textarea class="ld-notes" id="lang-vocab" style="min-height:120px" placeholder="3 new words or phrases. Preterite vs imperfect example. One sentence about your day."></textarea>
-  </div>
+    // ============ CONFIG ============
+    const SUPABASE_URL = 'https://vzgtthplmwslfdjbaxjy.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ6Z3R0aHBsbXdzbGZkamJheGp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU2NDAsImV4cCI6MjA5NDAzMTY0MH0.ewW8VvS6lBylVHzuKF70CgzyNQkdH-13sMupqbWsXjU';
+    // ================================
 
-  <div class="ld-section" data-section="notes">
-    <div class="ld-section-title">HOW DID TODAY FEEL?</div>
-    <div class="ld-mood-row" id="mood-row">
-      <button class="ld-mood-btn" data-mood="1">Rough</button>
-      <button class="ld-mood-btn" data-mood="2">Off</button>
-      <button class="ld-mood-btn" data-mood="3">Steady</button>
-      <button class="ld-mood-btn" data-mood="4">Good</button>
-      <button class="ld-mood-btn" data-mood="5">Sharp</button>
-    </div>
-    <div class="ld-section-title">PROMPTS (PICK ONE OR IGNORE)</div>
-    <div class="ld-prompt-list">
-      <div class="ld-prompt">What's one thing I'm avoiding right now?</div>
-      <div class="ld-prompt">Where did I project something onto someone today?</div>
-      <div class="ld-prompt">What did I do today that future-me in Brazil will thank me for?</div>
-      <div class="ld-prompt">Energy: physical, mental, emotional — rate each /10.</div>
-      <div class="ld-prompt">One small win. Specific. Concrete.</div>
-    </div>
-    <div class="ld-section-title">FREE WRITE</div>
-    <textarea class="ld-notes" id="notes-text" placeholder="Whatever's on your mind. No structure required."></textarea>
-    <div style="font-size:11px; color:#71717a; margin-top:8px"><span id="notes-count">0</span> characters · saves as you type</div>
-  </div>
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  <div class="ld-section" data-section="week">
-    <div class="ld-section-title">THIS WEEK</div>
-    <div class="ld-week" id="week-grid"></div>
-    <div class="ld-section-title" style="margin-top:18px">13-WEEK HEATMAP</div>
-    <div class="ld-heatmap" id="heatmap"></div>
-    <div class="ld-heat-labels" id="heat-labels"></div>
-  </div>
-
-  <div class="ld-section" data-section="data">
-    <div class="ld-section-title">EXPORT</div>
-    <div style="font-size:12px; color:#a1a1aa; margin-bottom:10px; line-height:1.6">Downloads everything: progress, edits, session logs, notes. Save to Drive or sync between devices.</div>
-    <button class="ld-btn" id="btn-export">Download JSON</button>
-    <div class="ld-section-title" style="margin-top:20px">IMPORT</div>
-    <div style="font-size:12px; color:#a1a1aa; margin-bottom:10px; line-height:1.6">Restore from a previous export. This <strong style="color:#f87171">replaces</strong> current data.</div>
-    <div class="ld-import-zone">
-      <input type="file" id="import-file" accept=".json,application/json" />
-      <label for="import-file" class="ld-import-label">Click to choose file</label>
-      <div style="font-size:11px; color:#52525b; margin-top:6px" id="import-status"></div>
-    </div>
-    <div class="ld-section-title" style="margin-top:20px">DANGER ZONE</div>
-    <button class="ld-btn danger" id="btn-reset">Reset all progress</button>
-  </div>
-
-  <div class="ld-controls">
-    <button class="ld-btn" onclick="document.querySelector('[data-tab=data]').click()">Data &amp; export</button>
-  </div>
-</div>
-
-<script>
-(function(){
-  const DEFAULTS = {
-    tasks: {
-      jobs: [
-        { id: 'j1', t: 'Check alerts + shortlist roles', s: 'LinkedIn + Indeed saved searches', xp: 10 },
-        { id: 'j2', t: 'Submit 1–2 applications', s: 'Tailor cover letter, apply direct + via board', xp: 25 },
-        { id: 'j3', t: 'LinkedIn outreach to hiring manager', s: '1 personalized connection request', xp: 15 },
-        { id: 'j4', t: 'Follow up on prior applications', s: 'Apps older than 5–7 days', xp: 10 },
-        { id: 'j5', t: 'Research a target company', s: 'Careers page, team, recent news', xp: 10 },
-      ],
-      move: [
-        { id: 'm1', t: 'Lift or train (45+ min)', s: 'Compound lifts or skill-focused session', xp: 25 },
-        { id: 'm2', t: 'Walk 8k steps', s: 'Outside ideally — sun + air', xp: 15 },
-        { id: 'm3', t: 'Mobility / stretch (10 min)', s: 'Hips, shoulders, t-spine', xp: 10 },
-      ],
-      sauna: [
-        { id: 's1', t: 'Sauna session (20–30 min)', s: '2–4 rounds with cool-down between', xp: 20 },
-        { id: 's2', t: 'Hydrate + electrolytes', s: '16–24oz water before and after', xp: 5 },
-        { id: 's3', t: 'Cold rinse / contrast', s: '30–60s at the end (optional but stacks)', xp: 10 },
-      ],
-      lang_es: [
-        { id: 'le1', t: 'Coursework / chapter work (30 min)', s: 'Current chapter — grammar focus', xp: 20 },
-        { id: 'le2', t: 'Listen: podcast or video (15 min)', s: 'Real Spanish, not a course', xp: 10 },
-        { id: 'le3', t: 'Speak / shadow (10 min)', s: 'Out loud — repeat audio or describe your day', xp: 15 },
-      ],
-      lang_pt: [
-        { id: 'lp1', t: 'Portuguese basics (20 min)', s: 'Duolingo, Pimsleur, or course', xp: 20 },
-        { id: 'lp2', t: 'Listen: Brazilian podcast/music (15 min)', s: 'Train your ear for the rhythm', xp: 10 },
-        { id: 'lp3', t: 'Learn 5 useful phrases', s: 'Visa, housing, food, transit vocab', xp: 15 },
-      ],
-    },
-    foods: ['Nuts','Dates','Beef','Chicken','Bone broth','Avocado','Yogurt','Cottage cheese','Carrots','Ginger','Apples','Fruit'],
-    teas: ['Ginger tea','Turmeric tea'],
-    skills: {
-      front_lever: {
-        name: 'Front lever',
-        ladder: [
-          { id: 'fl1', name: 'Tuck hold', target: '3 × 15s' },
-          { id: 'fl2', name: 'Advanced tuck hold', target: '3 × 15s' },
-          { id: 'fl3', name: 'Single-leg front lever', target: '3 × 10s each side' },
-          { id: 'fl4', name: 'Straddle front lever', target: '3 × 8s' },
-          { id: 'fl5', name: 'Full front lever (negatives)', target: '3 × slow 5s' },
-          { id: 'fl6', name: 'Full front lever hold', target: '1 × 5s' },
+    const DEFAULTS = {
+      tasks: {
+        jobs: [
+          { id: 'j1', t: 'Check alerts + shortlist roles', s: 'LinkedIn + Indeed saved searches', xp: 10 },
+          { id: 'j2', t: 'Submit 1–2 applications', s: 'Tailor cover letter, apply direct + via board', xp: 25 },
+          { id: 'j3', t: 'LinkedIn outreach to hiring manager', s: '1 personalized connection request', xp: 15 },
+          { id: 'j4', t: 'Follow up on prior applications', s: 'Apps older than 5–7 days', xp: 10 },
+          { id: 'j5', t: 'Research a target company', s: 'Careers page, team, recent news', xp: 10 },
         ],
-        currentRung: 0,
-      },
-      handstand: {
-        name: 'Handstand',
-        ladder: [
-          { id: 'hs1', name: 'Wall plank (chest to wall)', target: '3 × 30s' },
-          { id: 'hs2', name: 'Wall handstand (chest facing wall)', target: '3 × 30s' },
-          { id: 'hs3', name: 'Kick-up balance attempts', target: '5 min daily' },
-          { id: 'hs4', name: 'Freestanding 5–10s', target: '5 holds' },
-          { id: 'hs5', name: 'Freestanding 20s+', target: '3 holds' },
-          { id: 'hs6', name: 'Freestanding 60s', target: '1 hold' },
+        move: [
+          { id: 'm1', t: 'Lift or train (45+ min)', s: 'Compound lifts or skill-focused session', xp: 25 },
+          { id: 'm2', t: 'Walk 8k steps', s: 'Outside ideally — sun + air', xp: 15 },
+          { id: 'm3', t: 'Mobility / stretch (10 min)', s: 'Hips, shoulders, t-spine', xp: 10 },
         ],
-        currentRung: 0,
-      },
-      muscle_up: {
-        name: 'Muscle-up',
-        ladder: [
-          { id: 'mu1', name: 'Strict pull-ups', target: '3 × 8' },
-          { id: 'mu2', name: 'Chest-to-bar pull-ups', target: '3 × 5' },
-          { id: 'mu3', name: 'Straight bar dips', target: '3 × 8' },
-          { id: 'mu4', name: 'Explosive high pull-up + transition drill', target: '3 × 5' },
-          { id: 'mu5', name: 'Banded muscle-up', target: '3 × 3' },
-          { id: 'mu6', name: 'First strict muscle-up', target: '1 rep' },
-          { id: 'mu7', name: 'Strict muscle-up', target: '3 × 3' },
+        sauna: [
+          { id: 's1', t: 'Sauna session (20–30 min)', s: '2–4 rounds with cool-down between', xp: 20 },
+          { id: 's2', t: 'Hydrate + electrolytes', s: '16–24oz water before and after', xp: 5 },
+          { id: 's3', t: 'Cold rinse / contrast', s: '30–60s at the end (optional but stacks)', xp: 10 },
         ],
-        currentRung: 0,
+        lang_es: [
+          { id: 'le1', t: 'Coursework / chapter work (30 min)', s: 'Current chapter — grammar focus', xp: 20 },
+          { id: 'le2', t: 'Listen: podcast or video (15 min)', s: 'Real Spanish, not a course', xp: 10 },
+          { id: 'le3', t: 'Speak / shadow (10 min)', s: 'Out loud — repeat audio or describe your day', xp: 15 },
+        ],
+        lang_pt: [
+          { id: 'lp1', t: 'Portuguese basics (20 min)', s: 'Duolingo, Pimsleur, or course', xp: 20 },
+          { id: 'lp2', t: 'Listen: Brazilian podcast/music (15 min)', s: 'Train your ear for the rhythm', xp: 10 },
+          { id: 'lp3', t: 'Learn 5 useful phrases', s: 'Visa, housing, food, transit vocab', xp: 15 },
+        ],
       },
-    },
-  };
+      foods: ['Nuts','Dates','Beef','Chicken','Bone broth','Avocado','Yogurt','Cottage cheese','Carrots','Ginger','Apples','Fruit'],
+      teas: ['Ginger tea','Turmeric tea'],
+      skills: {
+        front_lever: {
+          name: 'Front lever',
+          ladder: [
+            { id: 'fl1', name: 'Tuck hold', target: '3 × 15s' },
+            { id: 'fl2', name: 'Advanced tuck hold', target: '3 × 15s' },
+            { id: 'fl3', name: 'Single-leg front lever', target: '3 × 10s each side' },
+            { id: 'fl4', name: 'Straddle front lever', target: '3 × 8s' },
+            { id: 'fl5', name: 'Full front lever (negatives)', target: '3 × slow 5s' },
+            { id: 'fl6', name: 'Full front lever hold', target: '1 × 5s' },
+          ],
+          currentRung: 0,
+        },
+        handstand: {
+          name: 'Handstand',
+          ladder: [
+            { id: 'hs1', name: 'Wall plank (chest to wall)', target: '3 × 30s' },
+            { id: 'hs2', name: 'Wall handstand (chest facing wall)', target: '3 × 30s' },
+            { id: 'hs3', name: 'Kick-up balance attempts', target: '5 min daily' },
+            { id: 'hs4', name: 'Freestanding 5–10s', target: '5 holds' },
+            { id: 'hs5', name: 'Freestanding 20s+', target: '3 holds' },
+            { id: 'hs6', name: 'Freestanding 60s', target: '1 hold' },
+          ],
+          currentRung: 0,
+        },
+        muscle_up: {
+          name: 'Muscle-up',
+          ladder: [
+            { id: 'mu1', name: 'Strict pull-ups', target: '3 × 8' },
+            { id: 'mu2', name: 'Chest-to-bar pull-ups', target: '3 × 5' },
+            { id: 'mu3', name: 'Straight bar dips', target: '3 × 8' },
+            { id: 'mu4', name: 'Explosive high pull-up + transition drill', target: '3 × 5' },
+            { id: 'mu5', name: 'Banded muscle-up', target: '3 × 3' },
+            { id: 'mu6', name: 'First strict muscle-up', target: '1 rep' },
+            { id: 'mu7', name: 'Strict muscle-up', target: '3 × 3' },
+          ],
+          currentRung: 0,
+        },
+      },
+    };
 
-  let state = {
-    day: 1, totalXP: 0, streak: 0, completed: {}, foods: {}, teas: {},
-    grocery: 0, saunaMin: 0, saunaRounds: 0, mood: 0, notes: '', langVocab: '',
-    activeLang: 'es', activeSkill: 'front_lever', history: {},
-    tasks: JSON.parse(JSON.stringify(DEFAULTS.tasks)),
-    foodList: [...DEFAULTS.foods], teaList: [...DEFAULTS.teas],
-    skills: JSON.parse(JSON.stringify(DEFAULTS.skills)),
-    skillLog: [], editMode: { group: null, foods: false },
-  };
+    function freshState(){
+      return {
+        day: 1, totalXP: 0, streak: 0,
+        completed: {}, foods: {}, teas: {},
+        grocery: 0, saunaMin: 0, saunaRounds: 0,
+        mood: 0, notes: '', langVocab: '',
+        activeLang: 'es', activeSkill: 'front_lever',
+        history: {},
+        tasks: JSON.parse(JSON.stringify(DEFAULTS.tasks)),
+        foodList: [...DEFAULTS.foods],
+        teaList: [...DEFAULTS.teas],
+        skills: JSON.parse(JSON.stringify(DEFAULTS.skills)),
+        skillLog: [],
+      };
+    }
 
-  try {
-    const saved = localStorage.getItem('ld-state-v3');
-    if (saved) { const p = JSON.parse(saved); state = Object.assign(state, p); state.editMode = { group: null, foods: false }; }
-  } catch(e){}
+    let state = freshState();
+    let user = null;
+    let syncStatus = 'idle';
+    let saveTimer = null;
+    let editMode = { group: null, foods: false, skills: false };
 
-  function save(){ try { localStorage.setItem('ld-state-v3', JSON.stringify(state)); } catch(e){} }
-  function langKey(){ return state.activeLang === 'es' ? 'lang_es' : 'lang_pt'; }
-  function currentTasks(){ return [...state.tasks.jobs, ...state.tasks.move, ...state.tasks.sauna, ...(state.tasks[langKey()])]; }
-  function pctDone(group){
-    let list = group === 'lang' ? state.tasks[langKey()] : state.tasks[group];
-    if (!list || !list.length) return 0;
-    return Math.round((list.filter(t => state.completed[t.id]).length / list.length) * 100);
-  }
-  function foodPct(){
-    const all = state.foodList.length + state.teaList.length;
-    if (!all) return 0;
-    return Math.round(((state.foodList.filter(f => state.foods[f]).length + state.teaList.filter(t => state.teas[t]).length) / all) * 100);
-  }
-  function skillPct(){
-    const s = state.skills[state.activeSkill];
-    if (!s || !s.ladder.length) return 0;
-    return Math.round((s.currentRung / (s.ladder.length - 1)) * 100);
-  }
-  function todayTotal(){ return currentTasks().filter(t => state.completed[t.id]).reduce((s,t) => s + t.xp, 0); }
-  function uid(p){ return p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+    function escapeHtml(str){
+      if (str == null) return '';
+      return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function uid(prefix){ return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
 
-  function escapeHtml(str){
-    if (str == null) return '';
-    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
+    async function loadFromCloud(){
+      if (!user) return;
+      setSync('syncing');
+      try {
+        const { data, error } = await supabase
+          .from('lockdown_state')
+          .select('state')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (error) throw error;
+        if (data && data.state) {
+          state = Object.assign(freshState(), data.state);
+        }
+        try { localStorage.setItem('ld-state-cache', JSON.stringify(state)); } catch(_){}
+        setSync('synced');
+      } catch(e) {
+        console.error('Load error', e);
+        try {
+          const cache = localStorage.getItem('ld-state-cache');
+          if (cache) state = Object.assign(freshState(), JSON.parse(cache));
+        } catch(_){}
+        setSync('error');
+      }
+      renderApp();
+    }
 
-  function renderTasks(group, listId){
-    const key = group === 'lang' ? langKey() : group;
-    const list = state.tasks[key];
-    const el = document.getElementById(listId);
-    const editing = state.editMode.group === group;
-    el.innerHTML = list.map(t => {
-      if (editing) {
-        return `<div class="ld-task editing" data-id="${t.id}">
-          <div style="flex:1">
-            <input class="ld-edit-input" data-field="t" data-id="${t.id}" value="${escapeHtml(t.t)}" />
-            <input class="ld-edit-input sub" data-field="s" data-id="${t.id}" value="${escapeHtml(t.s)}" />
+    async function saveToCloud(){
+      if (!user) return;
+      setSync('syncing');
+      try { localStorage.setItem('ld-state-cache', JSON.stringify(state)); } catch(_){}
+      try {
+        const { error } = await supabase
+          .from('lockdown_state')
+          .upsert({ user_id: user.id, state, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+        if (error) throw error;
+        setSync('synced');
+      } catch(e) {
+        console.error('Save error', e);
+        setSync('error');
+      }
+    }
+
+    function save(){
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveToCloud, 800);
+    }
+
+    function setSync(status){
+      syncStatus = status;
+      const el = document.getElementById('ld-sync');
+      if (!el) return;
+      const dot = el.querySelector('.ld-sync-dot');
+      const text = el.querySelector('.ld-sync-text');
+      dot.className = 'ld-sync-dot ' + (status === 'syncing' ? 'syncing' : status === 'error' ? 'error' : status === 'offline' ? 'offline' : '');
+      text.textContent = status === 'syncing' ? 'syncing…' : status === 'error' ? 'sync error' : status === 'offline' ? 'offline' : 'synced';
+    }
+
+    function renderAuth(mode = 'signin', errorMsg = ''){
+      const root = document.getElementById('ld-root');
+      root.innerHTML = `<div class="ld-shell">
+        <div class="ld-auth-screen">
+          <h1 class="ld-auth-title">90-Day <span style="color:#4ade80">Lockdown</span></h1>
+          <div class="ld-auth-sub">${mode === 'signin' ? 'Sign in to sync across devices' : 'Create account to start tracking'}</div>
+          <div class="ld-auth-form">
+            <input type="email" class="ld-auth-input" id="auth-email" placeholder="Email" autocomplete="email" />
+            <input type="password" class="ld-auth-input" id="auth-pass" placeholder="Password (8+ characters)" autocomplete="${mode === 'signin' ? 'current-password' : 'new-password'}" />
+            <button class="ld-auth-btn" id="auth-submit">${mode === 'signin' ? 'Sign in' : 'Create account'}</button>
+            ${errorMsg ? `<div class="ld-auth-error">${escapeHtml(errorMsg)}</div>` : ''}
+            <button class="ld-auth-toggle" id="auth-toggle">
+              ${mode === 'signin' ? 'Need an account? Sign up' : 'Have an account? Sign in'}
+            </button>
           </div>
-          <input class="ld-edit-input" data-field="xp" data-id="${t.id}" type="number" value="${t.xp}" style="width:50px" />
-          <button class="ld-icon-btn danger" data-delete="${t.id}"><i class="ti ti-trash"></i></button>
-        </div>`;
-      }
-      return `<div class="ld-task ${state.completed[t.id] ? 'done' : ''}" data-id="${t.id}" data-xp="${t.xp}">
-        <div class="ld-checkbox">${state.completed[t.id] ? '<i class="ti ti-check" style="font-size:12px"></i>' : ''}</div>
-        <div class="ld-task-body">
-          <div class="ld-task-title">${escapeHtml(t.t)}</div>
-          <div class="ld-task-sub">${escapeHtml(t.s)}</div>
         </div>
-        <div class="ld-task-xp">+${t.xp}</div>
       </div>`;
-    }).join('');
-    if (editing) {
-      el.insertAdjacentHTML('beforeend', `<div class="ld-add-row">
-        <input id="add-t-${group}" placeholder="New task title" />
-        <input id="add-s-${group}" placeholder="Subtitle" />
-        <input id="add-xp-${group}" type="number" placeholder="XP" value="10" />
-        <button data-add="${group}">+ Add</button>
-      </div>`);
-      el.querySelectorAll('.ld-edit-input').forEach(inp => {
-        inp.addEventListener('change', () => {
-          const id = inp.dataset.id, field = inp.dataset.field;
-          const item = list.find(x => x.id === id);
-          if (item) { item[field] = field === 'xp' ? (Number(inp.value)||0) : inp.value; save(); }
-        });
+      document.getElementById('auth-toggle').addEventListener('click', () => {
+        renderAuth(mode === 'signin' ? 'signup' : 'signin');
       });
-      el.querySelectorAll('[data-delete]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          state.tasks[key] = state.tasks[key].filter(t => t.id !== btn.dataset.delete);
-          delete state.completed[btn.dataset.delete];
-          save(); renderAll();
-        });
-      });
-      el.querySelector('[data-add]').addEventListener('click', () => {
-        const t = document.getElementById('add-t-' + group).value.trim();
-        const s = document.getElementById('add-s-' + group).value.trim();
-        const xp = Number(document.getElementById('add-xp-' + group).value) || 10;
-        if (!t) return;
-        state.tasks[key].push({ id: uid(group), t, s, xp });
-        save(); renderAll();
-      });
-    } else {
-      el.querySelectorAll('.ld-task').forEach(node => {
-        node.addEventListener('click', () => {
-          state.completed[node.dataset.id] = !state.completed[node.dataset.id];
-          save(); renderAll();
+      const submit = async () => {
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-pass').value;
+        if (!email || password.length < 8) {
+          renderAuth(mode, 'Need email and password 8+ characters');
+          return;
+        }
+        const btn = document.getElementById('auth-submit');
+        btn.textContent = '…';
+        btn.disabled = true;
+        try {
+          const fn = mode === 'signin' ? supabase.auth.signInWithPassword : supabase.auth.signUp;
+          const { data, error } = await fn.call(supabase.auth, { email, password });
+          if (error) throw error;
+          if (data.user) {
+            user = data.user;
+            await loadFromCloud();
+          }
+        } catch(e) {
+          renderAuth(mode, e.message || 'Auth failed');
+        }
+      };
+      document.getElementById('auth-submit').addEventListener('click', submit);
+      ['auth-email','auth-pass'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+          if (e.key === 'Enter') submit();
         });
       });
     }
-  }
 
-  function renderFood(){
-    const editing = state.editMode.foods;
-    const fg = document.getElementById('food-grid');
-    fg.innerHTML = state.foodList.map(f =>
-      `<div class="ld-food ${state.foods[f] ? 'had' : ''} ${editing ? 'editing-mode' : ''}" data-food="${escapeHtml(f)}">
-        ${escapeHtml(f)}${editing ? `<span class="ld-food-x"><i class="ti ti-x"></i></span>` : ''}
-      </div>`
-    ).join('');
-    const addFoodRow = document.getElementById('add-food-row');
-    if (addFoodRow) addFoodRow.remove();
-    if (editing) {
-      fg.insertAdjacentHTML('afterend', `<div class="ld-add-row" id="add-food-row">
-        <input id="add-food" placeholder="Add food" />
-        <button data-add-food="1">+ Add</button>
-      </div>`);
+    async function signOut(){
+      await supabase.auth.signOut();
+      user = null;
+      state = freshState();
+      renderAuth('signin');
     }
-    const tg = document.getElementById('tea-grid');
-    tg.innerHTML = state.teaList.map(t =>
-      `<div class="ld-food ${state.teas[t] ? 'had' : ''} ${editing ? 'editing-mode' : ''}" data-tea="${escapeHtml(t)}">
-        ${escapeHtml(t)}${editing ? `<span class="ld-food-x"><i class="ti ti-x"></i></span>` : ''}
-      </div>`
-    ).join('');
-    const addTeaRow = document.getElementById('add-tea-row');
-    if (addTeaRow) addTeaRow.remove();
-    if (editing) {
-      tg.insertAdjacentHTML('afterend', `<div class="ld-add-row" id="add-tea-row">
-        <input id="add-tea" placeholder="Add tea" />
-        <button data-add-tea="1">+ Add</button>
-      </div>`);
-    }
-    document.querySelectorAll('[data-food]').forEach(n => n.addEventListener('click', () => {
-      if (editing) { state.foodList = state.foodList.filter(f => f !== n.dataset.food); delete state.foods[n.dataset.food]; }
-      else { state.foods[n.dataset.food] = !state.foods[n.dataset.food]; }
-      save(); renderAll();
-    }));
-    document.querySelectorAll('[data-tea]').forEach(n => n.addEventListener('click', () => {
-      if (editing) { state.teaList = state.teaList.filter(t => t !== n.dataset.tea); delete state.teas[n.dataset.tea]; }
-      else { state.teas[n.dataset.tea] = !state.teas[n.dataset.tea]; }
-      save(); renderAll();
-    }));
-    if (editing) {
-      const afBtn = document.querySelector('[data-add-food]');
-      if (afBtn) afBtn.addEventListener('click', () => {
-        const v = document.getElementById('add-food').value.trim();
-        if (v && !state.foodList.includes(v)) { state.foodList.push(v); save(); renderAll(); }
-      });
-      const atBtn = document.querySelector('[data-add-tea]');
-      if (atBtn) atBtn.addEventListener('click', () => {
-        const v = document.getElementById('add-tea').value.trim();
-        if (v && !state.teaList.includes(v)) { state.teaList.push(v); save(); renderAll(); }
-      });
-    }
-    const gPct = Math.min(100, Math.round((state.grocery / 100) * 100));
-    document.getElementById('grocery-bar').style.width = gPct + '%';
-    document.getElementById('grocery-bar').style.background = state.grocery > 100 ? '#f87171' : (state.grocery > 80 ? '#fbbf24' : '#4ade80');
-    document.getElementById('grocery-status').textContent = state.grocery === 0 ? 'Set spend to track' :
-      state.grocery > 100 ? `$${Math.round(state.grocery - 100)} over target` : `$${Math.round(100 - state.grocery)} remaining this week`;
-  }
 
-  function renderSkill(){
-    document.querySelectorAll('.ld-skill-btn').forEach(b => b.classList.toggle('active', b.dataset.skill === state.activeSkill));
-    const skill = state.skills[state.activeSkill];
-    const ladderEl = document.getElementById('skill-ladder');
-    const editing = state.editMode.skills;
-    ladderEl.innerHTML = skill.ladder.map((rung, i) => {
-      const cls = i < skill.currentRung ? 'completed' : (i === skill.currentRung ? 'current' : '');
-      if (editing) {
-        return `<div class="ld-rung" style="cursor:default">
-          <span class="ld-rung-num">${i+1}</span>
-          <input class="ld-edit-input" data-rung-field="name" data-rung-i="${i}" value="${escapeHtml(rung.name)}" style="flex:1" />
-          <input class="ld-edit-input" data-rung-field="target" data-rung-i="${i}" value="${escapeHtml(rung.target)}" style="width:120px" />
-          <button class="ld-icon-btn danger" data-rung-del="${i}"><i class="ti ti-trash"></i></button>
+    function renderApp(){
+      const root = document.getElementById('ld-root');
+      root.innerHTML = `
+      <div class="ld-shell">
+        <div class="ld-header">
+          <h1 class="ld-title">90-Day <span class="accent">Lockdown</span></h1>
+          <div class="ld-user-info">
+            <span id="ld-sync" class="ld-sync-status"><span class="ld-sync-dot"></span><span class="ld-sync-text">synced</span></span>
+            <span>·</span>
+            <span>${escapeHtml(user?.email || '')}</span>
+            <button class="ld-icon-btn" id="signout-btn" title="Sign out">⇥</button>
+            <div class="ld-daypill" id="ld-daypill">Day <span id="ld-curday">${state.day}</span>/90</div>
+          </div>
+        </div>
+        <div class="ld-banner">Brazil runway</div>
+        <div class="ld-xp"><span id="ld-totxp">0</span> XP</div>
+        <div class="ld-divider"></div>
+
+        <div class="ld-stats">
+          <div class="ld-stat"><div class="ld-stat-val" id="ld-today" style="color:#4ade80">0</div><div class="ld-stat-lbl">TODAY</div></div>
+          <div class="ld-stat"><div class="ld-stat-val" id="ld-streak" style="color:#fbbf24">0</div><div class="ld-stat-lbl">STREAK</div></div>
+          <div class="ld-stat"><div class="ld-stat-val" id="ld-xp" style="color:#a78bfa">0</div><div class="ld-stat-lbl">TOTAL XP</div></div>
+          <div class="ld-stat"><div class="ld-stat-val" id="ld-day">${state.day}</div><div class="ld-stat-lbl">DAY</div></div>
+        </div>
+
+        <div class="ld-bars">
+          <div class="ld-bar-row"><span style="color:#4ade80">Jobs</span><div class="ld-bar-track"><div class="ld-bar-fill" id="bar-jobs" style="background:#4ade80; width:0%"></div></div><span class="ld-bar-pct" id="pct-jobs">0%</span></div>
+          <div class="ld-bar-row"><span style="color:#a78bfa">Move</span><div class="ld-bar-track"><div class="ld-bar-fill" id="bar-move" style="background:#a78bfa; width:0%"></div></div><span class="ld-bar-pct" id="pct-move">0%</span></div>
+          <div class="ld-bar-row"><span style="color:#fb923c">Food</span><div class="ld-bar-track"><div class="ld-bar-fill" id="bar-food" style="background:#fb923c; width:0%"></div></div><span class="ld-bar-pct" id="pct-food">0%</span></div>
+          <div class="ld-bar-row"><span style="color:#f87171">Sauna</span><div class="ld-bar-track"><div class="ld-bar-fill" id="bar-sauna" style="background:#f87171; width:0%"></div></div><span class="ld-bar-pct" id="pct-sauna">0%</span></div>
+          <div class="ld-bar-row"><span style="color:#60a5fa">Lang</span><div class="ld-bar-track"><div class="ld-bar-fill" id="bar-lang" style="background:#60a5fa; width:0%"></div></div><span class="ld-bar-pct" id="pct-lang">0%</span></div>
+          <div class="ld-bar-row"><span style="color:#ec4899">Skill</span><div class="ld-bar-track"><div class="ld-bar-fill" id="bar-skill" style="background:#ec4899; width:0%"></div></div><span class="ld-bar-pct" id="pct-skill">0%</span></div>
+        </div>
+
+        <div class="ld-msg" id="ld-msg">Day ${state.day}. Start with one task. That's all.</div>
+
+        <div class="ld-tabs">
+          <button class="ld-tab active" data-tab="jobs">Jobs</button>
+          <button class="ld-tab" data-tab="move">Move</button>
+          <button class="ld-tab" data-tab="skill">Skill</button>
+          <button class="ld-tab" data-tab="food">Food</button>
+          <button class="ld-tab" data-tab="sauna">Sauna</button>
+          <button class="ld-tab" data-tab="lang">Idiomas</button>
+          <button class="ld-tab" data-tab="notes">Notes</button>
+          <button class="ld-tab" data-tab="week">Week</button>
+          <button class="ld-tab" data-tab="data">Data</button>
+        </div>
+
+        <div class="ld-section active" data-section="jobs">
+          <div class="ld-section-title">TODAY'S JOB TASKS<button class="ld-edit-btn" data-edit-group="jobs">EDIT</button></div>
+          <div id="tasks-jobs"></div>
+        </div>
+        <div class="ld-section" data-section="move">
+          <div class="ld-section-title">MOVEMENT<button class="ld-edit-btn" data-edit-group="move">EDIT</button></div>
+          <div id="tasks-move"></div>
+        </div>
+        <div class="ld-section" data-section="skill">
+          <div class="ld-section-title">PRIMARY SKILL FOCUS</div>
+          <div class="ld-lang-row">
+            <button class="ld-skill-btn" data-skill="front_lever">Front lever</button>
+            <button class="ld-skill-btn" data-skill="handstand">Handstand</button>
+            <button class="ld-skill-btn" data-skill="muscle_up">Muscle-up</button>
+          </div>
+          <div class="ld-section-title">PROGRESSION LADDER<button class="ld-edit-btn" data-edit-skill="1">EDIT</button></div>
+          <div class="ld-ladder" id="skill-ladder"></div>
+          <div class="ld-section-title">LOG A SESSION</div>
+          <div class="ld-session-form">
+            <div class="ld-form-row"><label>Sets × reps/hold</label><input type="text" id="skill-sets" placeholder="e.g. 4x10s tuck holds" /></div>
+            <div class="ld-form-row"><label>Quality /10</label><input type="number" id="skill-quality" min="1" max="10" value="7" /></div>
+            <div class="ld-form-row"><label>Notes</label><textarea id="skill-notes" placeholder="How it felt. What clicked. What hurt."></textarea></div>
+            <div class="ld-form-row"><label></label><button class="ld-btn" id="skill-log-btn" style="margin-left:auto">Log session</button></div>
+          </div>
+          <div class="ld-section-title">SESSION HISTORY</div>
+          <div id="skill-log"></div>
+        </div>
+        <div class="ld-section" data-section="food">
+          <div class="ld-section-title">WHOLE FOODS — DID I EAT IT TODAY?<button class="ld-edit-btn" data-edit-foods="1">EDIT</button></div>
+          <div class="ld-food-grid" id="food-grid"></div>
+          <div class="ld-section-title" style="margin-top:18px">TEAS</div>
+          <div class="ld-food-grid" id="tea-grid"></div>
+          <div class="ld-section-title" style="margin-top:18px">GROCERY BUDGET</div>
+          <div class="ld-budget">
+            <div class="ld-budget-row"><span style="color:#a1a1aa">Spent this week</span><span>$<input type="number" class="ld-budget-input" id="grocery-spend" value="0" min="0" /></span></div>
+            <div class="ld-budget-row"><span style="color:#a1a1aa">Target</span><span style="color:#4ade80">$100</span></div>
+            <div class="ld-bar-track" style="margin-top:8px"><div class="ld-bar-fill" id="grocery-bar" style="background:#fb923c; width:0%"></div></div>
+            <div style="font-size:11px; color:#71717a; margin-top:6px" id="grocery-status">Set spend to track</div>
+          </div>
+        </div>
+        <div class="ld-section" data-section="sauna">
+          <div class="ld-section-title">SAUNA SESSION<button class="ld-edit-btn" data-edit-group="sauna">EDIT</button></div>
+          <div id="tasks-sauna"></div>
+          <div class="ld-section-title" style="margin-top:18px">SESSION LOG</div>
+          <div class="ld-budget">
+            <div class="ld-budget-row"><span style="color:#a1a1aa">Minutes today</span><span><input type="number" class="ld-budget-input" id="sauna-min" value="0" min="0" max="60" /></span></div>
+            <div class="ld-budget-row"><span style="color:#a1a1aa">Rounds</span><span><input type="number" class="ld-budget-input" id="sauna-rounds" value="0" min="0" max="5" /></span></div>
+            <div style="font-size:11px; color:#71717a; margin-top:6px">Target: 20–30 min, 2–4 rounds, 3–4x/week</div>
+          </div>
+        </div>
+        <div class="ld-section" data-section="lang">
+          <div class="ld-section-title">LANGUAGE FOCUS</div>
+          <div class="ld-lang-row">
+            <button class="ld-lang-btn" data-lang="es">Español</button>
+            <button class="ld-lang-btn" data-lang="pt">Português</button>
+          </div>
+          <div class="ld-section-title">TODAY'S TASKS<button class="ld-edit-btn" data-edit-group="lang">EDIT</button></div>
+          <div id="tasks-lang"></div>
+          <div class="ld-section-title" style="margin-top:18px">VOCAB / PHRASES LOGGED TODAY</div>
+          <textarea class="ld-notes" id="lang-vocab" style="min-height:120px" placeholder="3 new words or phrases. Preterite vs imperfect example."></textarea>
+        </div>
+        <div class="ld-section" data-section="notes">
+          <div class="ld-section-title">HOW DID TODAY FEEL?</div>
+          <div class="ld-mood-row" id="mood-row">
+            <button class="ld-mood-btn" data-mood="1">Rough</button>
+            <button class="ld-mood-btn" data-mood="2">Off</button>
+            <button class="ld-mood-btn" data-mood="3">Steady</button>
+            <button class="ld-mood-btn" data-mood="4">Good</button>
+            <button class="ld-mood-btn" data-mood="5">Sharp</button>
+          </div>
+          <div class="ld-section-title">PROMPTS (PICK ONE OR IGNORE)</div>
+          <div class="ld-prompt-list">
+            <div class="ld-prompt">What's one thing I'm avoiding right now?</div>
+            <div class="ld-prompt">Where did I project something onto someone today?</div>
+            <div class="ld-prompt">What did I do today that future-me in Brazil will thank me for?</div>
+            <div class="ld-prompt">Energy: physical, mental, emotional — rate each /10.</div>
+            <div class="ld-prompt">One small win. Specific. Concrete.</div>
+          </div>
+          <div class="ld-section-title">FREE WRITE</div>
+          <textarea class="ld-notes" id="notes-text" placeholder="Whatever's on your mind."></textarea>
+          <div style="font-size:11px; color:#71717a; margin-top:8px"><span id="notes-count">0</span> characters · saves as you type</div>
+        </div>
+        <div class="ld-section" data-section="week">
+          <div class="ld-section-title">THIS WEEK</div>
+          <div class="ld-week" id="week-grid"></div>
+          <div class="ld-section-title" style="margin-top:18px">13-WEEK HEATMAP</div>
+          <div class="ld-heatmap" id="heatmap"></div>
+          <div class="ld-heat-labels" id="heat-labels"></div>
+        </div>
+        <div class="ld-section" data-section="data">
+          <div class="ld-section-title">EXPORT BACKUP</div>
+          <div style="font-size:12px; color:#a1a1aa; margin-bottom:10px; line-height:1.6">Cloud sync handles cross-device. This is for offline backup or migrating data out.</div>
+          <button class="ld-btn" id="btn-export">Download JSON</button>
+          <div class="ld-section-title" style="margin-top:20px">IMPORT</div>
+          <div style="font-size:12px; color:#a1a1aa; margin-bottom:10px; line-height:1.6"><strong style="color:#f87171">Replaces</strong> all current data including in the cloud.</div>
+          <input type="file" id="import-file" accept=".json,application/json" style="font-size:12px; color:#a1a1aa" />
+          <div style="font-size:11px; color:#52525b; margin-top:6px" id="import-status"></div>
+          <div class="ld-section-title" style="margin-top:20px">DANGER ZONE</div>
+          <button class="ld-btn danger" id="btn-reset">Reset all progress</button>
+        </div>
+      </div>`;
+      attachHandlers();
+      renderAll();
+    }
+
+    function pctDone(group){
+      const key = group === 'lang' ? (state.activeLang === 'es' ? 'lang_es' : 'lang_pt') : group;
+      const list = state.tasks[key];
+      if (!list || !list.length) return 0;
+      const done = list.filter(t => state.completed[t.id]).length;
+      return Math.round((done / list.length) * 100);
+    }
+    function foodPct(){
+      const all = state.foodList.length + state.teaList.length;
+      if (!all) return 0;
+      const had = state.foodList.filter(f => state.foods[f]).length + state.teaList.filter(t => state.teas[t]).length;
+      return Math.round((had / all) * 100);
+    }
+    function skillPct(){
+      const s = state.skills[state.activeSkill];
+      if (!s || !s.ladder.length) return 0;
+      return Math.round((s.currentRung / (s.ladder.length - 1)) * 100);
+    }
+    function todayTotal(){
+      const tasks = [...state.tasks.jobs, ...state.tasks.move, ...state.tasks.sauna,
+                     ...state.tasks[state.activeLang === 'es' ? 'lang_es' : 'lang_pt']];
+      return tasks.filter(t => state.completed[t.id]).reduce((s,t) => s + t.xp, 0);
+    }
+
+    function renderTasks(group, listId){
+      const key = group === 'lang' ? (state.activeLang === 'es' ? 'lang_es' : 'lang_pt') : group;
+      const list = state.tasks[key];
+      const el = document.getElementById(listId);
+      if (!el) return;
+      const editing = editMode.group === group;
+      el.innerHTML = list.map(t => {
+        if (editing) {
+          return `<div class="ld-task editing" data-id="${t.id}">
+            <div style="flex:1">
+              <input class="ld-edit-input" data-field="t" data-id="${t.id}" value="${escapeHtml(t.t)}" />
+              <input class="ld-edit-input sub" data-field="s" data-id="${t.id}" value="${escapeHtml(t.s)}" />
+            </div>
+            <input class="ld-edit-input" data-field="xp" data-id="${t.id}" type="number" value="${t.xp}" style="width:50px" />
+            <button class="ld-icon-btn danger" data-delete="${t.id}">×</button>
+          </div>`;
+        }
+        return `<div class="ld-task ${state.completed[t.id] ? 'done' : ''}" data-id="${t.id}">
+          <div class="ld-checkbox">${state.completed[t.id] ? '✓' : ''}</div>
+          <div class="ld-task-body">
+            <div class="ld-task-title">${escapeHtml(t.t)}</div>
+            <div class="ld-task-sub">${escapeHtml(t.s)}</div>
+          </div>
+          <div class="ld-task-xp">+${t.xp}</div>
         </div>`;
-      }
-      return `<div class="ld-rung ${cls}" data-rung="${i}">
-        <span class="ld-rung-num">${i+1}</span>
-        <span class="ld-rung-name">${escapeHtml(rung.name)}</span>
-        <span class="ld-rung-target">${escapeHtml(rung.target)}</span>
-      </div>`;
-    }).join('');
-    if (editing) {
-      ladderEl.insertAdjacentHTML('beforeend', `<div class="ld-add-row">
-        <input id="add-rung-name" placeholder="Rung name" />
-        <input id="add-rung-target" placeholder="Target (e.g. 3x10s)" />
-        <button id="add-rung-btn">+ Add</button>
-      </div>`);
-      ladderEl.querySelectorAll('[data-rung-field]').forEach(inp => {
-        inp.addEventListener('change', () => {
-          skill.ladder[Number(inp.dataset.rungI)][inp.dataset.rungField] = inp.value; save();
+      }).join('');
+      if (editing) {
+        el.insertAdjacentHTML('beforeend', `<div class="ld-add-row">
+          <input id="add-t-${group}" placeholder="New task" />
+          <input id="add-s-${group}" placeholder="Subtitle" />
+          <input id="add-xp-${group}" type="number" placeholder="XP" value="10" />
+          <button data-add="${group}">+ Add</button>
+        </div>`);
+        el.querySelectorAll('.ld-edit-input').forEach(inp => {
+          inp.addEventListener('change', () => {
+            const id = inp.dataset.id, f = inp.dataset.field;
+            const item = list.find(x => x.id === id);
+            if (item) { item[f] = f === 'xp' ? (Number(inp.value)||0) : inp.value; save(); }
+          });
         });
+        el.querySelectorAll('[data-delete]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            state.tasks[key] = state.tasks[key].filter(t => t.id !== btn.dataset.delete);
+            delete state.completed[btn.dataset.delete];
+            save(); renderAll();
+          });
+        });
+        el.querySelector('[data-add]').addEventListener('click', () => {
+          const t = document.getElementById('add-t-' + group).value.trim();
+          const s = document.getElementById('add-s-' + group).value.trim();
+          const xp = Number(document.getElementById('add-xp-' + group).value) || 10;
+          if (!t) return;
+          state.tasks[key].push({ id: uid(group), t, s, xp });
+          save(); renderAll();
+        });
+      } else {
+        el.querySelectorAll('.ld-task').forEach(node => {
+          node.addEventListener('click', () => {
+            const id = node.dataset.id;
+            state.completed[id] = !state.completed[id];
+            save(); renderAll();
+          });
+        });
+      }
+    }
+
+    function renderFood(){
+      const fg = document.getElementById('food-grid');
+      if (!fg) return;
+      fg.innerHTML = state.foodList.map(f =>
+        `<div class="ld-food ${state.foods[f] ? 'had' : ''}" data-food="${escapeHtml(f)}">${escapeHtml(f)}${editMode.foods ? ' ×' : ''}</div>`
+      ).join('');
+      const tg = document.getElementById('tea-grid');
+      tg.innerHTML = state.teaList.map(t =>
+        `<div class="ld-food ${state.teas[t] ? 'had' : ''}" data-tea="${escapeHtml(t)}">${escapeHtml(t)}${editMode.foods ? ' ×' : ''}</div>`
+      ).join('');
+      document.querySelectorAll('#add-food-row, #add-tea-row').forEach(el => el.remove());
+      if (editMode.foods) {
+        fg.insertAdjacentHTML('afterend', `<div class="ld-add-row" id="add-food-row"><input id="add-food" placeholder="Add food" /><button data-add-food="1">+ Add</button></div>`);
+        tg.insertAdjacentHTML('afterend', `<div class="ld-add-row" id="add-tea-row"><input id="add-tea" placeholder="Add tea" /><button data-add-tea="1">+ Add</button></div>`);
+        document.querySelector('[data-add-food]').addEventListener('click', () => {
+          const v = document.getElementById('add-food').value.trim();
+          if (v && !state.foodList.includes(v)) { state.foodList.push(v); save(); renderAll(); }
+        });
+        document.querySelector('[data-add-tea]').addEventListener('click', () => {
+          const v = document.getElementById('add-tea').value.trim();
+          if (v && !state.teaList.includes(v)) { state.teaList.push(v); save(); renderAll(); }
+        });
+      }
+      fg.querySelectorAll('[data-food]').forEach(n => n.addEventListener('click', () => {
+        if (editMode.foods) {
+          state.foodList = state.foodList.filter(f => f !== n.dataset.food);
+          delete state.foods[n.dataset.food];
+        } else {
+          state.foods[n.dataset.food] = !state.foods[n.dataset.food];
+        }
+        save(); renderAll();
+      }));
+      tg.querySelectorAll('[data-tea]').forEach(n => n.addEventListener('click', () => {
+        if (editMode.foods) {
+          state.teaList = state.teaList.filter(t => t !== n.dataset.tea);
+          delete state.teas[n.dataset.tea];
+        } else {
+          state.teas[n.dataset.tea] = !state.teas[n.dataset.tea];
+        }
+        save(); renderAll();
+      }));
+      const gPct = Math.min(100, Math.round((state.grocery / 100) * 100));
+      const bar = document.getElementById('grocery-bar');
+      if (bar) {
+        bar.style.width = gPct + '%';
+        bar.style.background = state.grocery > 100 ? '#f87171' : (state.grocery > 80 ? '#fbbf24' : '#4ade80');
+      }
+      const stat = document.getElementById('grocery-status');
+      if (stat) stat.textContent = state.grocery === 0 ? 'Set spend to track' :
+                     state.grocery > 100 ? `$${Math.round(state.grocery - 100)} over target` :
+                     `$${Math.round(100 - state.grocery)} remaining this week`;
+    }
+
+    function renderSkill(){
+      document.querySelectorAll('.ld-skill-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.skill === state.activeSkill);
       });
-      ladderEl.querySelectorAll('[data-rung-del]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const i = Number(btn.dataset.rungDel);
-          skill.ladder.splice(i, 1);
-          if (skill.currentRung >= skill.ladder.length) skill.currentRung = Math.max(0, skill.ladder.length - 1);
+      const skill = state.skills[state.activeSkill];
+      const ladderEl = document.getElementById('skill-ladder');
+      if (!ladderEl) return;
+      ladderEl.innerHTML = skill.ladder.map((rung, i) => {
+        const cls = i < skill.currentRung ? 'completed' : (i === skill.currentRung ? 'current' : '');
+        if (editMode.skills) {
+          return `<div class="ld-rung" style="cursor:default">
+            <span class="ld-rung-num">${i+1}</span>
+            <input class="ld-edit-input" data-rung-field="name" data-rung-i="${i}" value="${escapeHtml(rung.name)}" style="flex:1" />
+            <input class="ld-edit-input" data-rung-field="target" data-rung-i="${i}" value="${escapeHtml(rung.target)}" style="width:120px" />
+            <button class="ld-icon-btn danger" data-rung-del="${i}">×</button>
+          </div>`;
+        }
+        return `<div class="ld-rung ${cls}" data-rung="${i}">
+          <span class="ld-rung-num">${i+1}</span>
+          <span class="ld-rung-name">${escapeHtml(rung.name)}</span>
+          <span class="ld-rung-target">${escapeHtml(rung.target)}</span>
+        </div>`;
+      }).join('');
+      if (editMode.skills) {
+        ladderEl.insertAdjacentHTML('beforeend', `<div class="ld-add-row">
+          <input id="add-rung-name" placeholder="Rung name" />
+          <input id="add-rung-target" placeholder="Target" />
+          <button id="add-rung-btn">+ Add</button>
+        </div>`);
+        ladderEl.querySelectorAll('[data-rung-field]').forEach(inp => {
+          inp.addEventListener('change', () => {
+            skill.ladder[Number(inp.dataset.rungI)][inp.dataset.rungField] = inp.value;
+            save();
+          });
+        });
+        ladderEl.querySelectorAll('[data-rung-del]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            skill.ladder.splice(Number(btn.dataset.rungDel), 1);
+            if (skill.currentRung >= skill.ladder.length) skill.currentRung = Math.max(0, skill.ladder.length - 1);
+            save(); renderSkill();
+          });
+        });
+        document.getElementById('add-rung-btn').addEventListener('click', () => {
+          const n = document.getElementById('add-rung-name').value.trim();
+          const t = document.getElementById('add-rung-target').value.trim();
+          if (!n) return;
+          skill.ladder.push({ id: uid('rung'), name: n, target: t || '—' });
           save(); renderSkill();
         });
+      } else {
+        ladderEl.querySelectorAll('[data-rung]').forEach(node => {
+          node.addEventListener('click', () => {
+            skill.currentRung = Number(node.dataset.rung);
+            save(); renderAll();
+          });
+        });
+      }
+      const logEl = document.getElementById('skill-log');
+      const sessions = state.skillLog.filter(s => s.skill === state.activeSkill).slice().reverse();
+      if (!sessions.length) {
+        logEl.innerHTML = `<div class="ld-log-empty">No sessions logged yet for ${escapeHtml(skill.name)}.</div>`;
+      } else {
+        logEl.innerHTML = sessions.map(s => `<div class="ld-log-row">
+          <div class="ld-log-date">${s.date}<br/>D${s.day}</div>
+          <div>
+            <div style="color:#e5e5e5; font-size:12px">${escapeHtml(s.sets)}</div>
+            ${s.notes ? `<div class="ld-log-notes" style="margin-top:4px">${escapeHtml(s.notes)}</div>` : ''}
+          </div>
+          <div style="text-align:center"><span style="color:#fbbf24">${s.quality}/10</span></div>
+          <button class="ld-icon-btn danger" data-del-session="${s.id}">×</button>
+        </div>`).join('');
+        logEl.querySelectorAll('[data-del-session]').forEach(b => {
+          b.addEventListener('click', () => {
+            state.skillLog = state.skillLog.filter(x => x.id !== b.dataset.delSession);
+            save(); renderSkill();
+          });
+        });
+      }
+    }
+
+    function renderMood(){
+      document.querySelectorAll('.ld-mood-btn').forEach(b => {
+        b.classList.toggle('active', Number(b.dataset.mood) === state.mood);
       });
-      const addRungBtn = document.getElementById('add-rung-btn');
-      if (addRungBtn) addRungBtn.addEventListener('click', () => {
-        const n = document.getElementById('add-rung-name').value.trim();
-        const t = document.getElementById('add-rung-target').value.trim();
-        if (!n) return;
-        skill.ladder.push({ id: uid('rung'), name: n, target: t || '—' });
+    }
+
+    function renderWeek(){
+      const letters = ['M','T','W','T','F','S','S'];
+      const today = (state.day - 1) % 7;
+      const wg = document.getElementById('week-grid');
+      if (!wg) return;
+      wg.innerHTML = letters.map((l, i) => {
+        const isToday = i === today;
+        const dayNum = state.day - today + i;
+        const hist = state.history[dayNum];
+        const dotColor = hist ? '#4ade80' : (isToday ? '#fbbf24' : '#3a3a3a');
+        return `<div class="ld-day ${isToday ? 'today' : ''}">
+          <div class="ld-day-letter">${l}</div><div class="ld-day-dot" style="color:${dotColor}">●</div>
+        </div>`;
+      }).join('');
+      const cells = [];
+      for (let i = 0; i < 91; i++){
+        const d = state.day - 90 + i;
+        const v = state.history[d];
+        let cls = '';
+        if (d === state.day) cls = 'l2';
+        else if (v >= 80) cls = 'l4';
+        else if (v >= 60) cls = 'l3';
+        else if (v >= 30) cls = 'l2';
+        else if (v > 0) cls = 'l1';
+        cells.push(`<div class="ld-heat-cell ${cls}"></div>`);
+      }
+      document.getElementById('heatmap').innerHTML = cells.join('');
+      const labels = [];
+      for (let w = 0; w < 13; w++){
+        const date = new Date();
+        date.setDate(date.getDate() + (w * 7 - 90));
+        labels.push(`<div class="ld-heat-label">${date.getMonth()+1}/${date.getDate()}</div>`);
+      }
+      document.getElementById('heat-labels').innerHTML = labels.join('');
+    }
+
+    function renderAll(){
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+      set('ld-curday', state.day);
+      set('ld-day', state.day);
+      const today = todayTotal();
+      set('ld-today', today);
+      set('ld-streak', state.streak);
+      set('ld-xp', state.totalXP + today);
+      set('ld-totxp', state.totalXP + today);
+      ['jobs','move','sauna'].forEach(g => {
+        const p = pctDone(g);
+        const bar = document.getElementById('bar-' + g);
+        if (bar) bar.style.width = p + '%';
+        set('pct-' + g, p + '%');
+      });
+      const fp = foodPct();
+      const fbar = document.getElementById('bar-food'); if (fbar) fbar.style.width = fp + '%';
+      set('pct-food', fp + '%');
+      const lp = pctDone('lang');
+      const lbar = document.getElementById('bar-lang'); if (lbar) lbar.style.width = lp + '%';
+      set('pct-lang', lp + '%');
+      const sp = skillPct();
+      const sbar = document.getElementById('bar-skill'); if (sbar) sbar.style.width = sp + '%';
+      set('pct-skill', sp + '%');
+      const totalPct = Math.round((pctDone('jobs') + pctDone('move') + fp + pctDone('sauna') + lp + sp) / 6);
+      let msg = `Day ${state.day}. Start with one task. That's all.`;
+      if (totalPct > 0 && totalPct < 40) msg = `Day ${state.day}. Momentum building. Keep going.`;
+      else if (totalPct >= 40 && totalPct < 80) msg = `Day ${state.day}. Solid progress. Don't coast.`;
+      else if (totalPct >= 80) msg = `Day ${state.day}. Locked in. This is the standard.`;
+      set('ld-msg', msg);
+
+      document.querySelectorAll('.ld-lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === state.activeLang));
+
+      renderTasks('jobs', 'tasks-jobs');
+      renderTasks('move', 'tasks-move');
+      renderTasks('sauna', 'tasks-sauna');
+      renderTasks('lang', 'tasks-lang');
+      renderFood();
+      renderSkill();
+      renderMood();
+      renderWeek();
+      setSync(syncStatus);
+
+      const notesEl = document.getElementById('notes-text');
+      if (notesEl) { notesEl.value = state.notes; set('notes-count', state.notes.length); }
+      const vocabEl = document.getElementById('lang-vocab');
+      if (vocabEl) vocabEl.value = state.langVocab;
+      const grocEl = document.getElementById('grocery-spend');
+      if (grocEl) grocEl.value = state.grocery;
+      const smEl = document.getElementById('sauna-min');
+      if (smEl) smEl.value = state.saunaMin;
+      const srEl = document.getElementById('sauna-rounds');
+      if (srEl) srEl.value = state.saunaRounds;
+    }
+
+    function attachHandlers(){
+      document.getElementById('signout-btn').addEventListener('click', signOut);
+      document.getElementById('ld-daypill').addEventListener('click', () => {
+        const v = prompt('Set current day (1-90):', state.day);
+        if (v === null) return;
+        state.day = Math.max(1, Math.min(90, Number(v) || 1));
+        save(); renderAll();
+      });
+      document.querySelectorAll('.ld-tab').forEach(t => {
+        t.addEventListener('click', () => {
+          document.querySelectorAll('.ld-tab').forEach(x => x.classList.remove('active'));
+          document.querySelectorAll('.ld-section').forEach(x => x.classList.remove('active'));
+          t.classList.add('active');
+          document.querySelector(`[data-section="${t.dataset.tab}"]`).classList.add('active');
+        });
+      });
+      document.querySelectorAll('.ld-lang-btn').forEach(b => b.addEventListener('click', () => {
+        state.activeLang = b.dataset.lang; save(); renderAll();
+      }));
+      document.querySelectorAll('.ld-skill-btn').forEach(b => b.addEventListener('click', () => {
+        state.activeSkill = b.dataset.skill; save(); renderAll();
+      }));
+      document.querySelectorAll('.ld-mood-btn').forEach(b => b.addEventListener('click', () => {
+        state.mood = Number(b.dataset.mood); save(); renderMood();
+      }));
+      document.querySelectorAll('[data-edit-group]').forEach(b => b.addEventListener('click', () => {
+        const g = b.dataset.editGroup;
+        editMode.group = editMode.group === g ? null : g;
+        b.textContent = editMode.group === g ? 'DONE' : 'EDIT';
+        renderTasks(g, 'tasks-' + g);
+      }));
+      document.querySelector('[data-edit-foods]').addEventListener('click', (e) => {
+        editMode.foods = !editMode.foods;
+        e.target.textContent = editMode.foods ? 'DONE' : 'EDIT';
+        renderFood();
+      });
+      document.querySelector('[data-edit-skill]').addEventListener('click', (e) => {
+        editMode.skills = !editMode.skills;
+        e.target.textContent = editMode.skills ? 'DONE' : 'EDIT';
+        renderSkill();
+      });
+      document.getElementById('skill-log-btn').addEventListener('click', () => {
+        const sets = document.getElementById('skill-sets').value.trim();
+        const quality = Number(document.getElementById('skill-quality').value) || 7;
+        const notes = document.getElementById('skill-notes').value.trim();
+        if (!sets) return;
+        const today = new Date();
+        state.skillLog.push({
+          id: uid('sess'), skill: state.activeSkill, sets, quality, notes,
+          day: state.day, date: `${today.getMonth()+1}/${today.getDate()}`,
+        });
+        document.getElementById('skill-sets').value = '';
+        document.getElementById('skill-notes').value = '';
         save(); renderSkill();
       });
-    } else {
-      ladderEl.querySelectorAll('[data-rung]').forEach(node => {
-        node.addEventListener('click', () => { skill.currentRung = Number(node.dataset.rung); save(); renderAll(); });
-      });
-    }
-    const logEl = document.getElementById('skill-log');
-    const sessions = state.skillLog.filter(s => s.skill === state.activeSkill).slice().reverse();
-    if (!sessions.length) {
-      logEl.innerHTML = `<div class="ld-log-empty">No sessions logged yet for ${escapeHtml(skill.name)}.</div>`;
-    } else {
-      logEl.innerHTML = sessions.map(s => `<div class="ld-log-row">
-        <div class="ld-log-date">${s.date}<br/>D${s.day}</div>
-        <div>
-          <div style="color:#e5e5e5; font-size:12px">${escapeHtml(s.sets)}</div>
-          ${s.notes ? `<div class="ld-log-notes" style="margin-top:4px">${escapeHtml(s.notes)}</div>` : ''}
-        </div>
-        <div style="text-align:center"><span style="color:#fbbf24">${s.quality}/10</span></div>
-        <button class="ld-icon-btn danger" data-del-session="${s.id}"><i class="ti ti-trash"></i></button>
-      </div>`).join('');
-      logEl.querySelectorAll('[data-del-session]').forEach(b => {
-        b.addEventListener('click', () => { state.skillLog = state.skillLog.filter(x => x.id !== b.dataset.delSession); save(); renderSkill(); });
-      });
-    }
-  }
-
-  function renderMood(){
-    document.querySelectorAll('.ld-mood-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.mood) === state.mood));
-  }
-
-  function renderWeek(){
-    const letters = ['M','T','W','T','F','S','S'];
-    const today = (state.day - 1) % 7;
-    document.getElementById('week-grid').innerHTML = letters.map((l, i) => {
-      const isToday = i === today;
-      const dayNum = state.day - today + i;
-      const hist = state.history[dayNum];
-      const dotColor = hist ? '#4ade80' : (isToday ? '#fbbf24' : '#3a3a3a');
-      return `<div class="ld-day ${isToday ? 'today' : ''}">
-        <div class="ld-day-letter">${l}</div>
-        <div class="ld-day-dot" style="color:${dotColor}">●</div>
-      </div>`;
-    }).join('');
-    const cells = [];
-    for (let i = 0; i < 91; i++){
-      const d = state.day - 90 + i;
-      const v = state.history[d];
-      let cls = '';
-      if (d === state.day) cls = 'l2';
-      else if (v >= 80) cls = 'l4';
-      else if (v >= 60) cls = 'l3';
-      else if (v >= 30) cls = 'l2';
-      else if (v > 0) cls = 'l1';
-      cells.push(`<div class="ld-heat-cell ${cls}"></div>`);
-    }
-    document.getElementById('heatmap').innerHTML = cells.join('');
-    const labels = [];
-    for (let w = 0; w < 13; w++){
-      const offset = w * 7 - 90;
-      const date = new Date(); date.setDate(date.getDate() + offset);
-      labels.push(`<div class="ld-heat-label">${date.getMonth()+1}/${date.getDate()}</div>`);
-    }
-    document.getElementById('heat-labels').innerHTML = labels.join('');
-  }
-
-  function renderAll(){
-    document.getElementById('ld-curday').textContent = state.day;
-    document.getElementById('ld-day').textContent = state.day;
-    const today = todayTotal();
-    document.getElementById('ld-today').textContent = today;
-    document.getElementById('ld-streak').textContent = state.streak;
-    document.getElementById('ld-xp').textContent = state.totalXP + today;
-    document.getElementById('ld-totxp').textContent = state.totalXP + today;
-    ['jobs','move','sauna'].forEach(g => {
-      const p = pctDone(g);
-      document.getElementById('bar-' + g).style.width = p + '%';
-      document.getElementById('pct-' + g).textContent = p + '%';
-    });
-    const fp = foodPct();
-    document.getElementById('bar-food').style.width = fp + '%';
-    document.getElementById('pct-food').textContent = fp + '%';
-    const lp = pctDone('lang');
-    document.getElementById('bar-lang').style.width = lp + '%';
-    document.getElementById('pct-lang').textContent = lp + '%';
-    const sp = skillPct();
-    document.getElementById('bar-skill').style.width = sp + '%';
-    document.getElementById('pct-skill').textContent = sp + '%';
-    const totalPct = Math.round((pctDone('jobs') + pctDone('move') + fp + pctDone('sauna') + lp + sp) / 6);
-    let msg = `Day ${state.day}. Start with one task. That's all.`;
-    if (totalPct > 0 && totalPct < 40) msg = `Day ${state.day}. Momentum building. Keep going.`;
-    else if (totalPct >= 40 && totalPct < 80) msg = `Day ${state.day}. Solid progress. Don't coast.`;
-    else if (totalPct >= 80) msg = `Day ${state.day}. Locked in. This is the standard.`;
-    document.getElementById('ld-msg').textContent = msg;
-    renderTasks('jobs', 'tasks-jobs');
-    renderTasks('move', 'tasks-move');
-    renderTasks('sauna', 'tasks-sauna');
-    renderTasks('lang', 'tasks-lang');
-    renderFood();
-    renderSkill();
-    renderMood();
-    renderWeek();
-  }
-
-  document.querySelectorAll('.ld-tab').forEach(t => {
-    t.addEventListener('click', () => {
-      document.querySelectorAll('.ld-tab').forEach(x => x.classList.remove('active'));
-      document.querySelectorAll('.ld-section').forEach(x => x.classList.remove('active'));
-      t.classList.add('active');
-      document.querySelector(`[data-section="${t.dataset.tab}"]`).classList.add('active');
-    });
-  });
-
-  document.querySelectorAll('.ld-lang-btn').forEach(b => {
-    b.addEventListener('click', () => {
-      state.activeLang = b.dataset.lang;
-      document.querySelectorAll('.ld-lang-btn').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
-      save(); renderAll();
-    });
-  });
-  document.querySelectorAll('.ld-skill-btn').forEach(b => {
-    b.addEventListener('click', () => { state.activeSkill = b.dataset.skill; save(); renderSkill(); renderAll(); });
-  });
-  document.querySelectorAll('.ld-mood-btn').forEach(b => {
-    b.addEventListener('click', () => { state.mood = Number(b.dataset.mood); save(); renderMood(); });
-  });
-  document.querySelectorAll('[data-edit-group]').forEach(b => {
-    b.addEventListener('click', () => {
-      const g = b.dataset.editGroup;
-      state.editMode.group = state.editMode.group === g ? null : g;
-      b.textContent = state.editMode.group === g ? 'DONE' : 'EDIT';
-      renderTasks(g, 'tasks-' + g);
-    });
-  });
-  document.querySelector('[data-edit-foods]').addEventListener('click', (e) => {
-    state.editMode.foods = !state.editMode.foods;
-    e.target.textContent = state.editMode.foods ? 'DONE' : 'EDIT';
-    renderFood();
-  });
-  document.querySelector('[data-edit-skill]').addEventListener('click', (e) => {
-    state.editMode.skills = !state.editMode.skills;
-    e.target.textContent = state.editMode.skills ? 'DONE' : 'EDIT';
-    renderSkill();
-  });
-
-  document.getElementById('skill-log-btn').addEventListener('click', () => {
-    const sets = document.getElementById('skill-sets').value.trim();
-    const quality = Number(document.getElementById('skill-quality').value) || 7;
-    const notes = document.getElementById('skill-notes').value.trim();
-    if (!sets) return;
-    const d = new Date();
-    state.skillLog.push({ id: uid('sess'), skill: state.activeSkill, sets, quality, notes, day: state.day, date: `${d.getMonth()+1}/${d.getDate()}` });
-    document.getElementById('skill-sets').value = '';
-    document.getElementById('skill-notes').value = '';
-    save(); renderSkill();
-  });
-
-  document.getElementById('ld-daypill').addEventListener('click', () => {
-    const v = prompt('Set current day (1-90):', state.day);
-    if (v === null) return;
-    state.day = Math.max(1, Math.min(90, Number(v) || 1));
-    save(); renderAll();
-  });
-
-  const notesEl = document.getElementById('notes-text');
-  notesEl.value = state.notes;
-  document.getElementById('notes-count').textContent = state.notes.length;
-  notesEl.addEventListener('input', () => { state.notes = notesEl.value; document.getElementById('notes-count').textContent = notesEl.value.length; save(); });
-
-  const vocabEl = document.getElementById('lang-vocab');
-  vocabEl.value = state.langVocab;
-  vocabEl.addEventListener('input', () => { state.langVocab = vocabEl.value; save(); });
-
-  const grocEl = document.getElementById('grocery-spend');
-  grocEl.value = state.grocery;
-  grocEl.addEventListener('input', () => { state.grocery = Number(grocEl.value) || 0; save(); renderFood(); });
-
-  const smEl = document.getElementById('sauna-min');
-  smEl.value = state.saunaMin;
-  smEl.addEventListener('input', () => { state.saunaMin = Number(smEl.value) || 0; save(); });
-
-  const srEl = document.getElementById('sauna-rounds');
-  srEl.value = state.saunaRounds;
-  srEl.addEventListener('input', () => { state.saunaRounds = Number(srEl.value) || 0; save(); });
-
-  document.getElementById('btn-export').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const d = new Date();
-    a.href = url; a.download = `lockdown-day${state.day}-${d.getMonth()+1}-${d.getDate()}.json`; a.click();
-    URL.revokeObjectURL(url);
-  });
-
-  document.getElementById('import-file').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = JSON.parse(reader.result);
-        if (typeof parsed !== 'object' || !parsed.tasks) throw new Error('Not a valid Lockdown export');
-        if (!confirm('Replace current data with imported file?')) return;
-        state = Object.assign(state, parsed);
-        state.editMode = { group: null, foods: false, skills: false };
+      document.getElementById('notes-text').addEventListener('input', (e) => {
+        state.notes = e.target.value;
+        document.getElementById('notes-count').textContent = e.target.value.length;
         save();
-        document.getElementById('import-status').textContent = '✓ Imported successfully';
-        document.getElementById('import-status').style.color = '#4ade80';
+      });
+      document.getElementById('lang-vocab').addEventListener('input', (e) => { state.langVocab = e.target.value; save(); });
+      document.getElementById('grocery-spend').addEventListener('input', (e) => { state.grocery = Number(e.target.value)||0; save(); renderFood(); });
+      document.getElementById('sauna-min').addEventListener('input', (e) => { state.saunaMin = Number(e.target.value)||0; save(); });
+      document.getElementById('sauna-rounds').addEventListener('input', (e) => { state.saunaRounds = Number(e.target.value)||0; save(); });
+      document.getElementById('btn-export').addEventListener('click', () => {
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const today = new Date();
+        a.href = url; a.download = `lockdown-day${state.day}-${today.getMonth()+1}-${today.getDate()}.json`; a.click();
+        URL.revokeObjectURL(url);
+      });
+      document.getElementById('import-file').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const parsed = JSON.parse(reader.result);
+            if (typeof parsed !== 'object' || !parsed.tasks) throw new Error('Not a valid Lockdown export');
+            if (!confirm('Replace ALL current data (cloud + local)?')) return;
+            state = Object.assign(freshState(), parsed);
+            save();
+            document.getElementById('import-status').textContent = '✓ Imported. Syncing to cloud…';
+            document.getElementById('import-status').style.color = '#4ade80';
+            renderAll();
+          } catch(err) {
+            document.getElementById('import-status').textContent = '✗ ' + err.message;
+            document.getElementById('import-status').style.color = '#f87171';
+          }
+        };
+        reader.readAsText(file);
+      });
+      document.getElementById('btn-reset').addEventListener('click', async () => {
+        if (!confirm('Reset all progress (including cloud)? Export first if you want a backup.')) return;
+        state = freshState();
+        await saveToCloud();
         renderAll();
-      } catch(err) {
-        document.getElementById('import-status').textContent = '✗ Import failed: ' + err.message;
-        document.getElementById('import-status').style.color = '#f87171';
-      }
-    };
-    reader.readAsText(file);
-  });
-
-  document.getElementById('btn-reset').addEventListener('click', () => {
-    if (confirm('Reset all progress? This cannot be undone (export first if you want a backup).')){
-      localStorage.removeItem('ld-state-v3'); location.reload();
+      });
     }
-  });
 
-  renderAll();
-})();
-</script>
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        user = session.user;
+        await loadFromCloud();
+      } else {
+        renderAuth('signup');
+      }
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user && (!user || user.id !== session.user.id)) {
+          user = session.user;
+          await loadFromCloud();
+        } else if (event === 'SIGNED_OUT') {
+          user = null;
+          state = freshState();
+          renderAuth('signin');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
